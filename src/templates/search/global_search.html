@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Search · {{ SITE_NAME }}{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+
+{% block content %}
+  <section class="container-padded pt-10">
+    <div class="surface p-6">
+      <h1 class="text-2xl font-semibold">Search</h1>
+      <p class="mt-2 text-sm text-white/70">Search across people, offices, districts, and jurisdictions.</p>
+
+      <form method="get" class="mt-6 flex gap-3">
+        <input name="q" class="input" value="{{ q }}" placeholder="e.g. ‘Mayor’, ‘CA-12’, ‘Jane Doe’" />
+        <button class="btn" type="submit">Search</button>
+      </form>
+    </div>
+
+    {% if q %}
+      <div class="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-6 space-y-6">
+          <div class="surface p-6">
+            <h2 class="text-lg font-semibold">People</h2>
+            {% if people %}
+              <div class="mt-4 space-y-2">
+                {% for p in people %}
+                  <a class="surface p-4 bg-white/5 border-white/10 shadow-none no-underline hover:bg-white/10 transition block" href="{% url 'people:person_detail' p.public_id %}">
+                    <div class="font-semibold">{{ p.display_name }}</div>
+                    <div class="mt-1 text-xs text-white/60">{{ p.display_party }}</div>
+                  </a>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="mt-3 text-sm text-white/60">No people matched.</div>
+            {% endif %}
+          </div>
+
+          <div class="surface p-6">
+            <h2 class="text-lg font-semibold">Offices</h2>
+            {% if offices %}
+              <div class="mt-4 space-y-2">
+                {% for o in offices %}
+                  <a class="surface p-4 bg-white/5 border-white/10 shadow-none no-underline hover:bg-white/10 transition block" href="{% url 'offices:office_detail' o.public_id %}">
+                    <div class="font-semibold">{{ o.name }}</div>
+                    <div class="mt-1 text-xs text-white/60">{{ o.get_level_display }} · {{ o.get_branch_display }}</div>
+                  </a>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="mt-3 text-sm text-white/60">No offices matched.</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="lg:col-span-6 space-y-6">
+          <div class="surface p-6">
+            <h2 class="text-lg font-semibold">Districts</h2>
+            {% if districts %}
+              <div class="mt-4 space-y-2">
+                {% for d in districts %}
+                  <a class="surface p-4 bg-white/5 border-white/10 shadow-none no-underline hover:bg-white/10 transition block" href="{% url 'geo:district_detail' d.public_id %}">
+                    <div class="font-semibold">{{ d }}</div>
+                    <div class="mt-1 text-xs text-white/60">{{ d.jurisdiction.state }} · {{ d.jurisdiction.name }}</div>
+                  </a>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="mt-3 text-sm text-white/60">No districts matched.</div>
+            {% endif %}
+          </div>
+
+          <div class="surface p-6">
+            <h2 class="text-lg font-semibold">Jurisdictions</h2>
+            {% if jurisdictions %}
+              <div class="mt-4 space-y-2">
+                {% for j in jurisdictions %}
+                  <a class="surface p-4 bg-white/5 border-white/10 shadow-none no-underline hover:bg-white/10 transition block" href="{% url 'geo:jurisdiction_detail' j.public_id %}">
+                    <div class="font-semibold">{{ j.name }}</div>
+                    <div class="mt-1 text-xs text-white/60">{{ j.get_jurisdiction_type_display }} · {{ j.state }}</div>
+                  </a>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="mt-3 text-sm text-white/60">No jurisdictions matched.</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}
+

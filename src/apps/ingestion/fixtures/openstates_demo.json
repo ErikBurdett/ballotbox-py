@@ -1,0 +1,31 @@
+[
+  {
+    "external_id": "demo-person-002",
+    "source_name": "Demo OpenStates export",
+    "source_url": "https://example.invalid/providers/openstates/demo-person-002",
+    "jurisdiction": {
+      "external_id": "demo-jurisdiction-ca-demo-city",
+      "state": "CA",
+      "jurisdiction_type": "city",
+      "name": "Demo City",
+      "county": "Demo County",
+      "city": "Demo City"
+    },
+    "office": {
+      "external_id": "demo-office-ca-demo-city-council",
+      "name": "City Council Member",
+      "level": "local",
+      "branch": "legislative",
+      "is_partisan": false,
+      "description": "Local legislative seat (demo data)."
+    },
+    "person": {
+      "external_id": "demo-person-002",
+      "first_name": "Jordan",
+      "last_name": "Kim",
+      "preferred_name": "Jordan",
+      "party": "democratic",
+      "photo_url": ""
+    }
+  }
+]

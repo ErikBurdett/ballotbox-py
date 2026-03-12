@@ -1,0 +1,99 @@
+[
+  {
+    "external_id": "demo-person-001",
+    "source_name": "Demo Ballotpedia export",
+    "source_url": "https://example.invalid/providers/ballotpedia/demo-person-001",
+    "jurisdiction": {
+      "external_id": "demo-jurisdiction-ca-demo-city",
+      "state": "CA",
+      "jurisdiction_type": "city",
+      "name": "Demo City",
+      "county": "Demo County",
+      "city": "Demo City"
+    },
+    "office": {
+      "external_id": "demo-office-ca-demo-city-mayor",
+      "name": "Mayor",
+      "level": "local",
+      "branch": "executive",
+      "is_partisan": false,
+      "description": "City executive office (demo data)."
+    },
+    "person": {
+      "external_id": "demo-person-001",
+      "first_name": "Alex",
+      "last_name": "Rivera",
+      "preferred_name": "Alex",
+      "party": "nonpartisan",
+      "photo_url": "https://example.invalid/headshots/demo-alex-rivera.jpg"
+    },
+    "external_links": [
+      { "kind": "ballotpedia", "label": "Ballotpedia", "url": "https://example.invalid/ballotpedia/demo-alex-rivera" }
+    ],
+    "social_links": [
+      { "platform": "x", "handle": "@demoalexrivera", "url": "https://example.invalid/x/demoalexrivera" }
+    ],
+    "videos": [
+      {
+        "provider": "youtube",
+        "provider_video_id": "aaaaaaaaaaa",
+        "title": "Demo interview with Alex Rivera",
+        "published_at": "2025-06-01T12:00:00Z",
+        "source_url": "https://youtube.com/watch?v=aaaaaaaaaaa",
+        "is_approved": false
+      }
+    ]
+  },
+  {
+    "external_id": "demo-person-002",
+    "source_name": "Demo Ballotpedia export",
+    "source_url": "https://example.invalid/providers/ballotpedia/demo-person-002",
+    "jurisdiction": {
+      "external_id": "demo-jurisdiction-ca-demo-city",
+      "state": "CA",
+      "jurisdiction_type": "city",
+      "name": "Demo City",
+      "county": "Demo County",
+      "city": "Demo City"
+    },
+    "district": {
+      "external_id": "demo-district-ca-demo-city-ward-3",
+      "district_type": "city_council",
+      "name": "Ward",
+      "number": "3"
+    },
+    "office": {
+      "external_id": "demo-office-ca-demo-city-council",
+      "name": "City Council Member",
+      "level": "local",
+      "branch": "legislative",
+      "is_partisan": false,
+      "description": "Local legislative seat (demo data)."
+    },
+    "person": {
+      "external_id": "demo-person-002",
+      "first_name": "Jordan",
+      "last_name": "Kim",
+      "preferred_name": "Jordan",
+      "party": "democratic",
+      "photo_url": "https://example.invalid/headshots/demo-jordan-kim.jpg"
+    },
+    "election": {
+      "name": "2026 General Election (Demo City)",
+      "election_type": "general",
+      "date": "2026-11-03"
+    },
+    "race": {
+      "seat_name": ""
+    },
+    "candidacy": {
+      "status": "running",
+      "party": "democratic",
+      "is_incumbent": false,
+      "is_challenger": true
+    },
+    "external_links": [
+      { "kind": "ballotpedia", "label": "Ballotpedia", "url": "https://example.invalid/ballotpedia/demo-jordan-kim" }
+    ]
+  }
+]

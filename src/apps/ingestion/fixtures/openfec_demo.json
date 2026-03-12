@@ -1,0 +1,48 @@
+[
+  {
+    "external_id": "demo-person-003",
+    "source_name": "Demo OpenFEC export",
+    "source_url": "https://example.invalid/providers/openfec/demo-person-003",
+    "jurisdiction": {
+      "external_id": "demo-jurisdiction-ca-demo-county",
+      "state": "CA",
+      "jurisdiction_type": "county",
+      "name": "Demo County",
+      "county": "Demo County",
+      "city": ""
+    },
+    "district": {
+      "external_id": "demo-district-ca-congressional-99",
+      "district_type": "congressional",
+      "name": "Congressional District",
+      "number": "99"
+    },
+    "office": {
+      "external_id": "demo-office-us-house",
+      "name": "U.S. Representative",
+      "level": "federal",
+      "branch": "legislative",
+      "is_partisan": true,
+      "description": "Federal legislative office (demo data)."
+    },
+    "person": {
+      "external_id": "demo-person-003",
+      "first_name": "Taylor",
+      "last_name": "Nguyen",
+      "preferred_name": "Taylor",
+      "party": "independent",
+      "photo_url": ""
+    },
+    "election": {
+      "name": "2026 General Election (Demo District)",
+      "election_type": "general",
+      "date": "2026-11-03"
+    },
+    "candidacy": {
+      "status": "declared",
+      "party": "independent",
+      "is_incumbent": false,
+      "is_challenger": true
+    }
+  }
+]

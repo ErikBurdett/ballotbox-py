@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}{{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+  <section class="container-padded pt-12 pb-10">
+    <div class="surface p-8 sm:p-12 overflow-hidden relative">
+      <div class="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_20%_20%,rgba(37,99,235,0.55),transparent_55%),radial-gradient(circle_at_80%_20%,rgba(225,29,72,0.55),transparent_55%)]"></div>
+      <div class="relative">
+        <div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+          <span class="h-2 w-2 rounded-full bg-patriot-blue"></span>
+          Data-first public directory
+        </div>
+        <h1 class="mt-4 text-3xl sm:text-5xl font-semibold tracking-tight">
+          Find current officials and candidates—fast, verifiable, and source-attributed.
+        </h1>
+        <p class="mt-4 text-white/70 max-w-2xl">
+          Browse offices, jurisdictions, and people records with transparent sourcing and last-updated timestamps.
+        </p>
+
+        <div class="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+          <div class="lg:col-span-8">
+            <label class="block text-sm text-white/70 mb-2" for="q">Search people, offices, districts</label>
+            <form action="{% url 'search:global_search' %}" method="get" class="flex gap-3">
+              <input id="q" name="q" class="input" placeholder="e.g. ‘Mayor’, ‘CA-12’, ‘Jane Doe’" />
+              <button class="btn" type="submit">Search</button>
+            </form>
+          </div>
+          <div class="lg:col-span-4 flex gap-3 justify-start lg:justify-end">
+            <a class="btn no-underline" href="{% url 'offices:officials_directory' %}">Find Officials</a>
+            <a class="btn-outline no-underline" href="{% url 'elections:candidates_directory' %}">Find Candidates</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="container-padded">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="surface p-6">
+        <div class="text-sm font-semibold">Trust & provenance</div>
+        <div class="mt-2 text-sm text-white/70">Every public record displays sources and last-updated timestamps.</div>
+      </div>
+      <div class="surface p-6">
+        <div class="text-sm font-semibold">Filterable directories</div>
+        <div class="mt-2 text-sm text-white/70">State, county, city, office level/branch, district type, party, and more.</div>
+      </div>
+      <div class="surface p-6">
+        <div class="text-sm font-semibold">Built for updates</div>
+        <div class="mt-2 text-sm text-white/70">Scheduled sync runs and audit-friendly raw provider payload storage.</div>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+

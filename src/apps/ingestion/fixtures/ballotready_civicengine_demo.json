@@ -1,0 +1,47 @@
+[
+  {
+    "external_id": "demo-person-001",
+    "source_name": "Demo BallotReady/CivicEngine export",
+    "source_url": "https://example.invalid/providers/ballotready/demo-person-001",
+    "jurisdiction": {
+      "external_id": "demo-jurisdiction-ca-demo-city",
+      "state": "CA",
+      "jurisdiction_type": "city",
+      "name": "Demo City",
+      "county": "Demo County",
+      "city": "Demo City"
+    },
+    "district": {
+      "external_id": "demo-district-ca-demo-city-ward-3",
+      "district_type": "city_council",
+      "name": "Ward",
+      "number": "3"
+    },
+    "office": {
+      "external_id": "demo-office-ca-demo-city-mayor",
+      "name": "Mayor",
+      "level": "local",
+      "branch": "executive",
+      "is_partisan": false,
+      "description": "City executive office (demo data)."
+    },
+    "person": {
+      "external_id": "demo-person-001",
+      "first_name": "Alex",
+      "last_name": "Rivera",
+      "preferred_name": "Alex",
+      "party": "nonpartisan",
+      "photo_url": ""
+    },
+    "term": {
+      "status": "current",
+      "start_date": "2024-01-01",
+      "end_date": null,
+      "party": "nonpartisan"
+    },
+    "contacts": [
+      { "contact_type": "email", "label": "Public email", "value": "alex.rivera@example.invalid", "is_public": true },
+      { "contact_type": "website", "label": "Official site", "value": "https://example.invalid/demo-city/mayor", "is_public": true }
+    ]
+  }
+]

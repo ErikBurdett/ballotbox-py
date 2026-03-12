@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{{ person.display_name }} · {{ SITE_NAME }}{% endblock %}
+
+{% block canonical %}
+  <link rel="canonical" href="{{ canonical_url }}">
+{% endblock %}
+
+{% block content %}
+  <section class="container-padded pt-10">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-4">
+        <div class="surface p-6">
+          <div class="flex gap-4 items-start">
+            <div class="h-20 w-20 rounded-2xl bg-white/10 overflow-hidden shrink-0">
+              {% if person.display_photo_url %}
+                <img class="h-full w-full object-cover" src="{{ person.display_photo_url }}" alt="Headshot of {{ person.display_name }}">
+              {% endif %}
+            </div>
+            <div class="min-w-0">
+              <h1 class="text-xl font-semibold leading-tight">{{ person.display_name }}</h1>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <span class="badge">{{ person.display_party }}</span>
+                <span class="badge">Updated {{ person.updated_at|naturaltime }}</span>
+                {% if person.last_verified_at %}
+                  <span class="badge">Verified {{ person.last_verified_at|naturaltime }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 space-y-4 text-sm">
+            {% if current_terms %}
+              <div>
+                <div class="text-white/60 text-xs uppercase tracking-wide">Current office</div>
+                <div class="mt-1 space-y-2">
+                  {% for term in current_terms %}
+                    <div class="surface p-4 bg-white/5 border-white/10 shadow-none">
+                      <div class="font-semibold">
+                        <a class="no-underline" href="{% url 'offices:office_detail' term.office.public_id %}">{{ term.office.name }}</a>
+                      </div>
+                      <div class="mt-1 text-white/70">
+                        <a class="no-underline" href="{% url 'geo:jurisdiction_detail' term.jurisdiction.public_id %}">{{ term.jurisdiction.name }}</a>
+                        {% if term.district %}
+                          · <a class="no-underline" href="{% url 'geo:district_detail' term.district.public_id %}">{{ term.district }}</a>
+                        {% endif %}
+                      </div>
+                      <div class="mt-2 text-xs text-white/60">Status: {{ term.get_status_display }}</div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+            {% if running_candidacies %}
+              <div>
+                <div class="text-white/60 text-xs uppercase tracking-wide">Running for</div>
+                <div class="mt-1 space-y-2">
+                  {% for cand in running_candidacies %}
+                    <div class="surface p-4 bg-white/5 border-white/10 shadow-none">
+                      <div class="font-semibold">
+                        <a class="no-underline" href="{% url 'offices:office_detail' cand.race.office.public_id %}">{{ cand.race.office.name }}</a>
+                      </div>
+                      <div class="mt-1 text-white/70">
+                        Election date: {{ cand.race.election.date }}
+                        {% if cand.race.district %}
+                          · <a class="no-underline" href="{% url 'geo:district_detail' cand.race.district.public_id %}">{{ cand.race.district }}</a>
+                        {% endif %}
+                      </div>
+                      <div class="mt-2 flex flex-wrap gap-2">
+                        <span class="badge">Status: {{ cand.get_status_display }}</span>
+                        {% if cand.is_incumbent %}<span class="badge">Incumbent</span>{% endif %}
+                        {% if cand.is_challenger %}<span class="badge">Challenger</span>{% endif %}
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+            <div class="border-t border-white/10 pt-4">
+              <div class="text-white/60 text-xs uppercase tracking-wide">Contact</div>
+              <div class="mt-2 space-y-2">
+                {% if email %}<div><span class="text-white/60">Email:</span> {{ email.value }}</div>{% endif %}
+                {% if phone %}<div><span class="text-white/60">Phone:</span> {{ phone.value }}</div>{% endif %}
+                {% if website %}<div><span class="text-white/60">Website:</span> <a href="{{ website.value }}">{{ website.value }}</a></div>{% endif %}
+                {% if ballotpedia %}<div><span class="text-white/60">Ballotpedia:</span> <a href="{{ ballotpedia.url }}">{{ ballotpedia.url }}</a></div>{% endif %}
+              </div>
+            </div>
+
+            {% if person.social_links.all %}
+              <div class="border-t border-white/10 pt-4">
+                <div class="text-white/60 text-xs uppercase tracking-wide">Social</div>
+                <div class="mt-2 space-y-2">
+                  {% for s in person.social_links.all %}
+                    <div><span class="text-white/60">{{ s.get_platform_display }}:</span> <a href="{{ s.url }}">{{ s.url }}</a></div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-8 space-y-6">
+        <div class="surface p-6">
+          <h2 class="text-lg font-semibold">Video interviews</h2>
+          <p class="mt-1 text-sm text-white/60">Only approved providers and videos are shown.</p>
+          {% if person.videos.all %}
+            <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {% for v in person.videos.all %}
+                <div class="surface p-4 bg-white/5 border-white/10 shadow-none">
+                  <div class="text-sm font-semibold truncate">{{ v.title|default:"Video" }}</div>
+                  <div class="mt-3 aspect-video rounded-xl overflow-hidden border border-white/10 bg-black/30">
+                    <iframe
+                      title="{{ v.title|default:'Video' }}"
+                      src="{{ v.embed_url }}"
+                      class="w-full h-full"
+                      loading="lazy"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowfullscreen>
+                    </iframe>
+                  </div>
+                  {% if v.source_url %}
+                    <div class="mt-2 text-xs text-white/60">Source: <a href="{{ v.source_url }}">{{ v.source_url }}</a></div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="mt-4 text-sm text-white/60">No approved videos yet.</div>
+          {% endif %}
+        </div>
+
+        <div class="surface p-6">
+          <h2 class="text-lg font-semibold">Sources</h2>
+          <p class="mt-1 text-sm text-white/60">Raw provider payloads are stored for auditability.</p>
+          {% if sources %}
+            <div class="mt-4 space-y-2">
+              {% for s in sources %}
+                <div class="surface p-4 bg-white/5 border-white/10 shadow-none flex items-start justify-between gap-4">
+                  <div class="min-w-0">
+                    <div class="text-sm font-semibold">{{ s.get_provider_display }}</div>
+                    <div class="text-xs text-white/60 truncate">External ID: {{ s.external_id }}</div>
+                    {% if s.source_url %}
+                      <div class="text-xs text-white/60 truncate">URL: <a href="{{ s.source_url }}">{{ s.source_url }}</a></div>
+                    {% endif %}
+                  </div>
+                  <div class="text-xs text-white/60 shrink-0">Fetched {{ s.fetched_at|naturaltime }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="mt-4 text-sm text-white/60">No sources recorded yet.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+

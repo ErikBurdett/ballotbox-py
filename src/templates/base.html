@@ -1,0 +1,82 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}{{ SITE_TAGLINE }}{% endblock %}">
+    {% block canonical %}{% endblock %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    {% if debug %}
+      <script>
+        // Dev-only fallback: if Tailwind build output isn't present yet,
+        // load Tailwind via CDN so the app isn't unstyled.
+        window.tailwind = window.tailwind || {};
+        window.tailwind.config = {
+          theme: {
+            extend: {
+              colors: {
+                ink: { 950: "#07070B", 900: "#0B0C12", 800: "#101221" },
+                patriot: { red: "#E11D48", blue: "#2563EB", gold: "#D6B25E" }
+              }
+            }
+          }
+        };
+      </script>
+      <script src="https://cdn.tailwindcss.com"></script>
+      <style>
+        :root { color-scheme: dark; }
+        body { background: radial-gradient(1200px 800px at 20% 0%, rgba(37,99,235,.18), transparent 55%),
+                      radial-gradient(900px 700px at 80% 10%, rgba(225,29,72,.18), transparent 60%),
+                      linear-gradient(180deg, #07070B, #07070B); color: #fff; font-family: "DM Sans", system-ui, sans-serif; }
+        h1,h2,h3 { font-family: "Cinzel", serif; letter-spacing: .02em; }
+        .container-padded { max-width: 72rem; margin: 0 auto; padding-left: 1rem; padding-right: 1rem; }
+        .surface { background: rgba(16,18,33,.72); border: 1px solid rgba(255,255,255,.10); border-radius: 1rem; box-shadow: 0 18px 50px rgba(0,0,0,.45); backdrop-filter: blur(10px); }
+        .btn { display:inline-flex; align-items:center; justify-content:center; border-radius: .9rem; padding:.55rem 1rem; font-weight:700; background:#fff; color:#07070B; text-decoration:none; }
+        .btn-outline { display:inline-flex; align-items:center; justify-content:center; border-radius: .9rem; padding:.55rem 1rem; font-weight:700; border: 1px solid rgba(255,255,255,.20); color:#fff; text-decoration:none; }
+        .badge { display:inline-flex; align-items:center; border-radius: 999px; padding:.15rem .6rem; font-size:.75rem; font-weight:700; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.10); }
+        .input, .select { width:100%; border-radius:.9rem; background: rgba(7,7,11,.55); border: 1px solid rgba(255,255,255,.10); padding:.55rem .75rem; color:#fff; }
+        .input::placeholder { color: rgba(255,255,255,.45); }
+      </style>
+    {% endif %}
+    <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+  </head>
+  <body class="min-h-screen">
+    <header class="sticky top-0 z-50 border-b border-white/10 bg-ink-950/80 backdrop-blur">
+      <div class="container-padded py-4 flex items-center justify-between gap-4">
+        <a href="{% url 'core:home' %}" class="no-underline">
+          <div class="flex items-center gap-3">
+            <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-patriot-blue via-patriot-gold to-patriot-red"></div>
+            <div>
+              <div class="text-sm font-semibold tracking-wide text-white uppercase" style="font-family: 'Cinzel', serif;">{{ SITE_NAME }}</div>
+              <div class="text-xs text-white/60">Verified, source-attributed voter info</div>
+            </div>
+          </div>
+        </a>
+        <nav class="flex items-center gap-3 text-sm">
+          <a class="btn-outline no-underline" href="{% url 'offices:officials_directory' %}">Find Officials</a>
+          <a class="btn-outline no-underline" href="{% url 'elections:candidates_directory' %}">Find Candidates</a>
+          <a class="text-white/80 hover:text-white" href="{% url 'search:global_search' %}">Search</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="border-t border-white/10 mt-16">
+      <div class="container-padded py-10 text-sm text-white/60">
+        <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+          <div>© {{ SITE_NAME }}</div>
+          <div class="text-white/50">Demo data only unless you run sync jobs.</div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
+

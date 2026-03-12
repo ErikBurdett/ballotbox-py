@@ -1,0 +1,25 @@
+[
+  {
+    "external_id": "demo-person-001",
+    "source_name": "Demo YouTube export",
+    "source_url": "https://example.invalid/providers/youtube/demo-person-001",
+    "person": {
+      "external_id": "demo-person-001",
+      "first_name": "Alex",
+      "last_name": "Rivera",
+      "preferred_name": "Alex",
+      "party": "nonpartisan",
+      "photo_url": ""
+    },
+    "videos": [
+      {
+        "provider": "youtube",
+        "provider_video_id": "bbbbbbbbbbb",
+        "title": "Demo Q&A (unapproved)",
+        "published_at": "2025-07-15T16:30:00Z",
+        "source_url": "https://youtube.com/watch?v=bbbbbbbbbbb",
+        "is_approved": false
+      }
+    ]
+  }
+]

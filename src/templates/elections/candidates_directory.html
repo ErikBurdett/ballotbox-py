@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load querystring %}
+
+{% block title %}Candidates · {{ SITE_NAME }}{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+
+{% block content %}
+  <section class="container-padded pt-10">
+    <div class="surface p-6">
+      <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+        <div>
+          <h1 class="text-2xl font-semibold">Candidates running for office</h1>
+          <p class="mt-2 text-sm text-white/70">Filter by geography, office, party, election date, and candidate status. URLs are shareable.</p>
+        </div>
+        <div class="text-sm text-white/60">Showing {{ page_obj.paginator.count }} record{{ page_obj.paginator.count|pluralize }}</div>
+      </div>
+
+      <form
+        class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+        hx-get="{% url 'elections:candidates_directory' %}"
+        hx-target="#results"
+        hx-push-url="true"
+        hx-trigger="change, keyup changed delay:400ms from:input"
+      >
+        <div>
+          <label class="block text-xs text-white/60 mb-1">State</label>
+          <select name="state" class="select">
+            <option value="">All</option>
+            {% for s in states %}
+              <option value="{{ s }}" {% if filters.state == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1">County</label>
+          <input name="county" class="input" value="{{ filters.county }}" placeholder="e.g. King" />
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1">City/Town</label>
+          <input name="city" class="input" value="{{ filters.city }}" placeholder="e.g. Seattle" />
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1">Jurisdiction type</label>
+          <select name="jurisdiction_type" class="select">
+            <option value="">All</option>
+            {% for value,label in jurisdiction_type_choices %}
+              <option value="{{ value }}" {% if filters.jurisdiction_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs text-white/60 mb-1">District type</label>
+          <select name="district_type" class="select">
+            <option value="">All</option>
+            {% for value,label in district_type_choices %}
+              <option value="{{ value }}" {% if filters.district_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1">District name/number</label>
+          <input name="district" class="input" value="{{ filters.district }}" placeholder="e.g. CA-12, Ward 3" />
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1">Office level</label>
+          <select name="office_level" class="select">
+            <option value="">All</option>
+            {% for value,label in office_level_choices %}
+              <option value="{{ value }}" {% if filters.office_level == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1">Office branch</label>
+          <select name="office_branch" class="select">
+            <option value="">All</option>
+            {% for value,label in office_branch_choices %}
+              <option value="{{ value }}" {% if filters.office_branch == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs text-white/60 mb-1">Party</label>
+          <select name="party" class="select">
+            <option value="">All</option>
+            {% for value,label in party_choices %}
+              <option value="{{ value }}" {% if filters.party == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1">Election year</label>
+          <input name="election_year" class="input" value="{{ filters.election_year }}" placeholder="e.g. 2026" />
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1">Election date</label>
+          <input name="election_date" class="input" value="{{ filters.election_date }}" placeholder="YYYY-MM-DD" />
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1">Candidate status</label>
+          <select name="status" class="select">
+            <option value="">Any</option>
+            {% for value,label in candidacy_status_choices %}
+              <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="flex items-end gap-4">
+          <label class="inline-flex items-center gap-2 text-sm text-white/80">
+            <input type="checkbox" name="incumbent" value="1" {% if filters.incumbent %}checked{% endif %} class="h-4 w-4 rounded border-white/20 bg-ink-950/60">
+            Incumbent
+          </label>
+          <label class="inline-flex items-center gap-2 text-sm text-white/80">
+            <input type="checkbox" name="challenger" value="1" {% if filters.challenger %}checked{% endif %} class="h-4 w-4 rounded border-white/20 bg-ink-950/60">
+            Challenger
+          </label>
+          <label class="inline-flex items-center gap-2 text-sm text-white/80">
+            <input type="checkbox" name="has_video" value="1" {% if filters.has_video %}checked{% endif %} class="h-4 w-4 rounded border-white/20 bg-ink-950/60">
+            Has video
+          </label>
+        </div>
+
+        <div>
+          <label class="block text-xs text-white/60 mb-1">Sort</label>
+          <select name="sort" class="select">
+            <option value="election_date" {% if filters.sort == "election_date" %}selected{% endif %}>Election date</option>
+            <option value="updated" {% if filters.sort == "updated" %}selected{% endif %}>Recently updated</option>
+            <option value="name" {% if filters.sort == "name" %}selected{% endif %}>Name</option>
+            <option value="office" {% if filters.sort == "office" %}selected{% endif %}>Office</option>
+          </select>
+        </div>
+      </form>
+    </div>
+
+    <div id="results" class="mt-6">
+      {% include "elections/partials/_candidates_results.html" %}
+    </div>
+  </section>
+{% endblock %}
+
