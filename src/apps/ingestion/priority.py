@@ -6,6 +6,7 @@ from apps.ingestion.models import Provider
 # Lower number = higher priority for conflicting fields
 PROVIDER_PRIORITY: dict[str, int] = {
     Provider.BALLOTPEDIA: 10,
+    Provider.DEMOCRACY_WORKS: 15,
     Provider.BALLOTREADY_CIVICENGINE: 20,
     Provider.OPENSTATES: 30,
     Provider.OPENFEC: 40,

@@ -17,6 +17,7 @@ class Provider(models.TextChoices):
     OPENSTATES = "openstates", "OpenStates"
     OPENFEC = "openfec", "OpenFEC"
     YOUTUBE = "youtube", "YouTube"
+    DEMOCRACY_WORKS = "democracy_works", "Democracy Works"
 
 
 class SyncStatus(models.TextChoices):

@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -16,6 +17,16 @@ env = environ.Env(
     REDIS_URL=(str, ""),
     CELERY_BROKER_URL=(str, ""),
     CELERY_RESULT_BACKEND=(str, ""),
+    DEMOCRACY_WORKS_API_KEY=(str, ""),
+    DEMOCRACY_WORKS_STATE_CODE=(str, ""),
+    DEMOCRACY_WORKS_ADDRESS_STREET=(str, ""),
+    DEMOCRACY_WORKS_ADDRESS_CITY=(str, ""),
+    DEMOCRACY_WORKS_ADDRESS_STATE_CODE=(str, ""),
+    DEMOCRACY_WORKS_ADDRESS_ZIP=(str, ""),
+    DEMOCRACY_WORKS_ADDRESS_ZIP4=(str, ""),
+    DEMOCRACY_WORKS_ELECTION_YEAR=(str, ""),
+    DEMOCRACY_WORKS_START_DATE=(str, ""),
+    DEMOCRACY_WORKS_END_DATE=(str, ""),
 )
 
 environ.Env.read_env(BASE_DIR.parent / ".env")
@@ -142,9 +153,30 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.ingestion.tasks.sync_all_providers",
         "schedule": 60 * 60 * 24,
     },
+    "sync-ballotpedia-photos-hourly": {
+        "task": "apps.ingestion.tasks.sync_ballotpedia_photos_batch",
+        "schedule": 60 * 60,
+        "args": [50, 250, 30],
+    },
     "detect-duplicates-hourly": {
         "task": "apps.ingestion.tasks.detect_person_duplicates",
         "schedule": 60 * 60,
+    },
+}
+
+DEMOCRACY_WORKS_API_BASE_URL = "https://api.democracy.works/v2"
+DEMOCRACY_WORKS_API_KEY = env("DEMOCRACY_WORKS_API_KEY") or ""
+DEMOCRACY_WORKS_SYNC = {
+    "state_code": (env("DEMOCRACY_WORKS_STATE_CODE") or "").strip().upper(),
+    "election_year": (env("DEMOCRACY_WORKS_ELECTION_YEAR") or "").strip(),
+    "start_date": (env("DEMOCRACY_WORKS_START_DATE") or "").strip(),
+    "end_date": (env("DEMOCRACY_WORKS_END_DATE") or "").strip(),
+    "address": {
+        "street": env("DEMOCRACY_WORKS_ADDRESS_STREET") or "",
+        "city": env("DEMOCRACY_WORKS_ADDRESS_CITY") or "",
+        "state_code": (env("DEMOCRACY_WORKS_ADDRESS_STATE_CODE") or "").strip().upper(),
+        "zip": env("DEMOCRACY_WORKS_ADDRESS_ZIP") or "",
+        "zip4": env("DEMOCRACY_WORKS_ADDRESS_ZIP4") or "",
     },
 }
 

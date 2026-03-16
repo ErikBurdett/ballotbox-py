@@ -40,6 +40,18 @@ class Race(PublicIdModel, ReviewableModel):
     seat_name = models.CharField(max_length=255, blank=True)
     is_partisan = models.BooleanField(default=False, db_index=True)
 
+    # Democracy Works contest metadata (best-effort; may be blank for some contests/providers).
+    contest_type = models.CharField(max_length=64, blank=True, db_index=True)
+    seats_up_for_election = models.PositiveSmallIntegerField(null=True, blank=True)
+    ranked_choice = models.BooleanField(default=False, db_index=True)
+    ranked_choice_rank_number = models.PositiveSmallIntegerField(null=True, blank=True)
+    has_primary = models.BooleanField(default=False, db_index=True)
+    primary_date = models.DateField(null=True, blank=True, db_index=True)
+    general_date = models.DateField(null=True, blank=True, db_index=True)
+    title = models.CharField(max_length=255, blank=True)
+    body = models.TextField(blank=True)
+    about_office = models.TextField(blank=True)
+
     class Meta:
         indexes = [
             models.Index(fields=["election", "office"]),
@@ -77,6 +89,13 @@ class Candidacy(PublicIdModel, ReviewableModel):
     status = models.CharField(max_length=32, choices=CandidacyStatus.choices, default=CandidacyStatus.RUNNING)
     is_incumbent = models.BooleanField(default=False, db_index=True)
     is_challenger = models.BooleanField(default=False, db_index=True)
+
+    # Democracy Works candidate metadata (best-effort).
+    is_write_in = models.BooleanField(default=False, db_index=True)
+    endorsement_count = models.PositiveSmallIntegerField(null=True, blank=True)
+    running_mate_full_name = models.CharField(max_length=255, blank=True)
+    running_mate_title = models.CharField(max_length=255, blank=True)
+    ranked_choice_voting_round = models.PositiveSmallIntegerField(null=True, blank=True)
 
     class Meta:
         indexes = [

@@ -22,6 +22,10 @@
         hx-push-url="true"
         hx-trigger="change, keyup changed delay:400ms from:input"
       >
+        <div class="sm:col-span-2 lg:col-span-4">
+          <label class="block text-xs text-white/60 mb-1">Search</label>
+          <input name="q" class="input" value="{{ filters.q }}" placeholder="Search names, offices, counties, districts, parties, status, contact links, etc." />
+        </div>
         <div>
           <label class="block text-xs text-white/60 mb-1">State</label>
           <select name="state" class="select">
@@ -110,15 +114,15 @@
 
         <div class="flex items-end gap-4">
           <label class="inline-flex items-center gap-2 text-sm text-white/80">
-            <input type="checkbox" name="incumbent" value="1" {% if filters.incumbent %}checked{% endif %} class="h-4 w-4 rounded border-white/20 bg-ink-950/60">
+            <input type="checkbox" name="incumbent" value="1" {% if filters.incumbent %}checked{% endif %} class="h-4 w-4 rounded border-white/20 bg-navy-950/60">
             Incumbent
           </label>
           <label class="inline-flex items-center gap-2 text-sm text-white/80">
-            <input type="checkbox" name="challenger" value="1" {% if filters.challenger %}checked{% endif %} class="h-4 w-4 rounded border-white/20 bg-ink-950/60">
+            <input type="checkbox" name="challenger" value="1" {% if filters.challenger %}checked{% endif %} class="h-4 w-4 rounded border-white/20 bg-navy-950/60">
             Challenger
           </label>
           <label class="inline-flex items-center gap-2 text-sm text-white/80">
-            <input type="checkbox" name="has_video" value="1" {% if filters.has_video %}checked{% endif %} class="h-4 w-4 rounded border-white/20 bg-ink-950/60">
+            <input type="checkbox" name="has_video" value="1" {% if filters.has_video %}checked{% endif %} class="h-4 w-4 rounded border-white/20 bg-navy-950/60">
             Has video
           </label>
         </div>

@@ -201,7 +201,8 @@ def normalize_demo_record(*, provider: Provider, payload: dict[str, Any], sync_r
         if person_external_id:
             ct_person = ContentType.objects.get_for_model(Person)
             existing = (
-                SourceRecord.objects.filter(provider=provider, external_id=person_external_id, normalized_content_type=ct_person)
+                # Demo fixtures reuse IDs across providers; reconcile to a single Person when possible.
+                SourceRecord.objects.filter(external_id=person_external_id, normalized_content_type=ct_person)
                 .order_by("-fetched_at")
                 .first()
             )

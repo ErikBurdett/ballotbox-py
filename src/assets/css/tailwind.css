@@ -11,14 +11,15 @@
   }
   body {
     font-family: theme('fontFamily.sans');
-    @apply bg-ink-950 text-white antialiased;
+    @apply bg-navy-950 text-white antialiased;
     background-image:
-      radial-gradient(1200px 800px at 20% 0%, rgba(37,99,235,.18), transparent 55%),
-      radial-gradient(900px 700px at 80% 10%, rgba(225,29,72,.18), transparent 60%),
-      linear-gradient(180deg, #07070B, #07070B);
+      radial-gradient(1200px 800px at 15% 0%, rgba(37,99,235,.22), transparent 55%),
+      radial-gradient(900px 700px at 85% 10%, rgba(225,29,72,.20), transparent 60%),
+      linear-gradient(180deg, #060B1A, #060B1A);
   }
   h1, h2, h3 {
     font-family: theme('fontFamily.display');
+    letter-spacing: .02em;
   }
   a {
     @apply text-white/90 hover:text-white underline-offset-4;
@@ -30,26 +31,26 @@
     @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
   }
   .surface {
-    @apply bg-ink-800/70 backdrop-blur border border-white/10 rounded-2xl shadow-premium;
+    @apply bg-navy-900/70 backdrop-blur border border-white/10 rounded-2xl shadow-premium;
   }
   .btn {
     @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold
-      bg-white text-ink-950 hover:bg-white/90 transition;
+      bg-patriot-red text-white hover:bg-patriot-red/90 transition;
   }
   .btn-outline {
     @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold
-      border border-white/20 text-white hover:bg-white/10 transition;
+      border border-white/25 text-white hover:bg-white/10 transition;
   }
   .badge {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
       bg-white/10 border border-white/10 text-white/90;
   }
   .input {
-    @apply w-full rounded-xl bg-ink-950/60 border border-white/10 px-3 py-2 text-sm
+    @apply w-full rounded-xl bg-navy-950/60 border border-white/10 px-3 py-2 text-sm
       placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-patriot-blue/60;
   }
   .select {
-    @apply w-full rounded-xl bg-ink-950/60 border border-white/10 px-3 py-2 text-sm
+    @apply w-full rounded-xl bg-navy-950/60 border border-white/10 px-3 py-2 text-sm
       focus:outline-none focus:ring-2 focus:ring-patriot-blue/60;
   }
 }

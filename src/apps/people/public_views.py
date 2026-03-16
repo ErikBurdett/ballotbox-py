@@ -19,13 +19,13 @@ def person_detail(request, public_id):
             "external_links",
             Prefetch(
                 "officeholder_terms",
-                queryset=OfficeholderTerm.objects.select_related("office", "district", "jurisdiction").order_by(
+                queryset=OfficeholderTerm.objects.select_related("office", "office__jurisdiction", "district", "jurisdiction").order_by(
                     "-start_date", "-updated_at"
                 ),
             ),
             Prefetch(
                 "candidacies",
-                queryset=Candidacy.objects.select_related("race__office", "race__district", "race__election").order_by(
+                queryset=Candidacy.objects.select_related("race__office", "race__office__jurisdiction", "race__district", "race__election").order_by(
                     "-race__election__date", "-updated_at"
                 ),
             ),
@@ -71,6 +71,7 @@ def person_detail(request, public_id):
             "email": email,
             "phone": phone,
             "website": website,
+            "contact_methods": [c for c in person.contact_methods.all() if c.is_public],
             "sources": sources,
             "canonical_url": canonical_url,
         },

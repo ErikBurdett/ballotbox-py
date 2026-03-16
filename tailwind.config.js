@@ -7,19 +7,19 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        display: ["Cinzel", "ui-serif", "Georgia", "serif"],
-        sans: ["DM Sans", "ui-sans-serif", "system-ui", "sans-serif"]
+        display: ["Oswald", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["Source Sans 3", "ui-sans-serif", "system-ui", "sans-serif"]
       },
       colors: {
-        ink: {
-          950: "#07070B",
-          900: "#0B0C12",
-          800: "#101221"
+        navy: {
+          950: "#060B1A",
+          900: "#0A1330",
+          800: "#0F1B40",
+          700: "#15265A"
         },
         patriot: {
           red: "#E11D48",
-          blue: "#2563EB",
-          gold: "#D6B25E"
+          blue: "#2563EB"
         }
       },
       boxShadow: {

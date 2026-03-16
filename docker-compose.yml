@@ -75,7 +75,12 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
     restart: unless-stopped
-    command: ["sh", "-lc", "npm install && npm run dev"]
+    command:
+      [
+        "sh",
+        "-lc",
+        "npm install && chown -R 1000:1000 /app/node_modules /app/src/static/css 2>/dev/null || true; su node -c \"npm run dev\""
+      ]
 
 volumes:
   db_data:

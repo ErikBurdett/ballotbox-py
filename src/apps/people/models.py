@@ -69,7 +69,20 @@ class Person(PublicIdModel, ReviewableModel):
 
     @property
     def display_photo_url(self) -> str:
-        return self.manual_photo_url or self.photo_url
+        if self.manual_photo_url:
+            return self.manual_photo_url
+        u = (self.photo_url or "").strip()
+        ul = u.lower()
+        if not u:
+            return ""
+        # Hide provider placeholders (keeps UI clean; staff can override with manual_photo_url).
+        if ul.endswith(".svg"):
+            return ""
+        if "submitphoto" in ul:
+            return ""
+        if "bp-logo" in ul or "ballotpedia-logo" in ul:
+            return ""
+        return u
 
     def __str__(self) -> str:
         return self.display_name

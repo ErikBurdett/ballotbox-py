@@ -9,7 +9,7 @@ from django.shortcuts import render
 from apps.geo.models import DistrictType, Jurisdiction, JurisdictionType
 from apps.media.models import VideoEmbed
 from apps.offices.models import OfficeBranch, OfficeLevel
-from apps.people.models import Party
+from apps.people.models import ContactMethod, ExternalLink, Party, SocialLink
 
 from .models import Candidacy, CandidacyStatus
 
@@ -17,11 +17,119 @@ from .models import Candidacy, CandidacyStatus
 def _truthy(value: str | None) -> bool:
     return (value or "").strip().lower() in {"1", "true", "t", "yes", "y", "on"}
 
+def _norm_spaces(value: str) -> str:
+    v = (value or "").replace("_", " ").replace("-", " ")
+    return " ".join(v.strip().split())
+
+
+def _norm_county(value: str) -> str:
+    v = _norm_spaces(value)
+    if v.lower().endswith(" county"):
+        v = v[:-7].strip()
+    return v
+
+
+def _match_choice_values(query: str, choices) -> set[str]:
+    q = (query or "").strip().lower()
+    if not q:
+        return set()
+    matches: set[str] = set()
+    for value, label in choices:
+        v = str(value).lower()
+        l = str(label).strip().lower()
+        if q == v or q == l:
+            matches.add(str(value))
+    return matches
+
+
+def _apply_global_search_candidacies(qs, query: str):
+    q = _norm_spaces(query)
+    if not q:
+        return qs
+    q_lower = q.lower()
+    q_state = q.upper() if len(q) == 2 and q.isalpha() else ""
+    q_county = _norm_county(q)
+
+    person_contact = ContactMethod.objects.filter(person_id=OuterRef("person_id"), is_public=True).filter(
+        Q(value__icontains=q) | Q(label__icontains=q)
+    )
+    person_external = ExternalLink.objects.filter(person_id=OuterRef("person_id")).filter(
+        Q(url__icontains=q) | Q(label__icontains=q)
+    )
+    person_social = SocialLink.objects.filter(person_id=OuterRef("person_id")).filter(
+        Q(url__icontains=q) | Q(handle__icontains=q)
+    )
+
+    qs = qs.annotate(
+        q_contact=Exists(person_contact),
+        q_external=Exists(person_external),
+        q_social=Exists(person_social),
+    )
+
+    office_level_matches = _match_choice_values(q, OfficeLevel.choices)
+    office_branch_matches = _match_choice_values(q, OfficeBranch.choices)
+    jurisdiction_type_matches = _match_choice_values(q, JurisdictionType.choices)
+    district_type_matches = _match_choice_values(q, DistrictType.choices)
+    party_matches = _match_choice_values(q, Party.choices)
+    candidacy_status_matches = _match_choice_values(q, CandidacyStatus.choices)
+
+    search_q = (
+        Q(person__first_name__icontains=q)
+        | Q(person__last_name__icontains=q)
+        | Q(person__preferred_name__icontains=q)
+        | Q(person__manual_display_name__icontains=q)
+        | Q(person__manual_party__icontains=q)
+        | Q(race__office__name__icontains=q)
+        | Q(race__office__level__in=office_level_matches)  # type: ignore[arg-type]
+        | Q(race__office__branch__in=office_branch_matches)  # type: ignore[arg-type]
+        | Q(race__office__jurisdiction__name__icontains=q)
+        | Q(race__office__jurisdiction__county__icontains=q_county)
+        | Q(race__office__jurisdiction__city__icontains=q)
+        | Q(race__office__jurisdiction__jurisdiction_type__in=jurisdiction_type_matches)  # type: ignore[arg-type]
+        | Q(race__district__name__icontains=q)
+        | Q(race__district__number__icontains=q)
+        | Q(race__district__district_type__in=district_type_matches)  # type: ignore[arg-type]
+        | Q(race__election__name__icontains=q)
+        | Q(race__contest_type__icontains=q)
+        | Q(race__title__icontains=q)
+        | Q(race__about_office__icontains=q)
+        | Q(race__body__icontains=q)
+        | Q(party__in=party_matches)  # type: ignore[arg-type]
+        | Q(status__in=candidacy_status_matches)  # type: ignore[arg-type]
+        | Q(running_mate_full_name__icontains=q)
+        | Q(running_mate_title__icontains=q)
+        | Q(q_contact=True)
+        | Q(q_external=True)
+        | Q(q_social=True)
+    )
+
+    if q_state:
+        search_q = search_q | Q(race__office__jurisdiction__state=q_state) | Q(race__election__jurisdiction__state=q_state)
+
+    if q_lower in {"incumbent"}:
+        search_q = search_q | Q(is_incumbent=True)
+    if q_lower in {"challenger"}:
+        search_q = search_q | Q(is_challenger=True)
+    if q_lower in {"write-in", "writein", "write in"}:
+        search_q = search_q | Q(is_write_in=True)
+
+    if q.isdigit() and len(q) == 4:
+        search_q = search_q | Q(race__election__date__year=int(q))
+    if "-" in q and len(q) == 10:
+        try:
+            y, m, d = [int(x) for x in q.split("-")]
+            search_q = search_q | Q(race__election__date=date(y, m, d))
+        except Exception:
+            pass
+
+    return qs.filter(search_q)
+
 
 def candidates_directory(request):
+    q = (request.GET.get("q") or "").strip()
     state = (request.GET.get("state") or "").strip().upper()
-    county = (request.GET.get("county") or "").strip()
-    city = (request.GET.get("city") or "").strip()
+    county = _norm_county(request.GET.get("county") or "")
+    city = _norm_spaces(request.GET.get("city") or "")
     jurisdiction_type = (request.GET.get("jurisdiction_type") or "").strip()
 
     district_type = (request.GET.get("district_type") or "").strip()
@@ -32,6 +140,8 @@ def candidates_directory(request):
     party = (request.GET.get("party") or "").strip()
 
     election_year = (request.GET.get("election_year") or "").strip()
+    if not election_year:
+        election_year = str(date.today().year)
     election_date = (request.GET.get("election_date") or "").strip()
 
     status = (request.GET.get("status") or "").strip()
@@ -44,10 +154,14 @@ def candidates_directory(request):
     candidacies = Candidacy.objects.select_related(
         "person",
         "race__office",
+        "race__office__jurisdiction",
         "race__district",
         "race__election",
         "race__election__jurisdiction",
     )
+
+    if q:
+        candidacies = _apply_global_search_candidacies(candidacies, q)
 
     if status in {c[0] for c in CandidacyStatus.choices}:
         candidacies = candidacies.filter(status=status)
@@ -58,13 +172,34 @@ def candidates_directory(request):
         candidacies = candidacies.filter(is_challenger=True)
 
     if state:
-        candidacies = candidacies.filter(race__election__jurisdiction__state=state)
+        candidacies = candidacies.filter(race__office__jurisdiction__state=state)
     if county:
-        candidacies = candidacies.filter(race__election__jurisdiction__county__iexact=county)
+        candidacies = candidacies.filter(
+            Q(race__office__jurisdiction__county__iexact=county)
+            | Q(race__office__jurisdiction__county__icontains=county)
+            | Q(
+                race__office__jurisdiction__jurisdiction_type=JurisdictionType.COUNTY,
+                race__office__jurisdiction__name__icontains=county,
+            )
+        )
     if city:
-        candidacies = candidacies.filter(race__election__jurisdiction__city__iexact=city)
+        city_like = {
+            JurisdictionType.CITY,
+            JurisdictionType.TOWN,
+            JurisdictionType.TOWNSHIP,
+            JurisdictionType.VILLAGE,
+            JurisdictionType.BOROUGH,
+        }
+        candidacies = candidacies.filter(
+            Q(race__office__jurisdiction__city__iexact=city)
+            | Q(race__office__jurisdiction__city__icontains=city)
+            | Q(
+                race__office__jurisdiction__jurisdiction_type__in=city_like,
+                race__office__jurisdiction__name__icontains=city,
+            )
+        )
     if jurisdiction_type in {c[0] for c in JurisdictionType.choices}:
-        candidacies = candidacies.filter(race__election__jurisdiction__jurisdiction_type=jurisdiction_type)
+        candidacies = candidacies.filter(race__office__jurisdiction__jurisdiction_type=jurisdiction_type)
 
     if district_type in {c[0] for c in DistrictType.choices}:
         candidacies = candidacies.filter(race__district__district_type=district_type)
@@ -120,6 +255,7 @@ def candidates_directory(request):
         "party_choices": Party.choices,
         "candidacy_status_choices": CandidacyStatus.choices,
         "filters": {
+            "q": q,
             "state": state,
             "county": county,
             "city": city,

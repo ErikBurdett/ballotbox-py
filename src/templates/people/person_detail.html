@@ -41,12 +41,15 @@
                         <a class="no-underline" href="{% url 'offices:office_detail' term.office.public_id %}">{{ term.office.name }}</a>
                       </div>
                       <div class="mt-1 text-white/70">
-                        <a class="no-underline" href="{% url 'geo:jurisdiction_detail' term.jurisdiction.public_id %}">{{ term.jurisdiction.name }}</a>
+                        <a class="no-underline" href="{% url 'geo:jurisdiction_detail' term.office.jurisdiction.public_id %}">{{ term.office.jurisdiction.name }}</a>
                         {% if term.district %}
                           · <a class="no-underline" href="{% url 'geo:district_detail' term.district.public_id %}">{{ term.district }}</a>
                         {% endif %}
                       </div>
-                      <div class="mt-2 text-xs text-white/60">Status: {{ term.get_status_display }}</div>
+                      <div class="mt-2 text-xs text-white/60">
+                        <span>{{ term.office.get_level_display }} · {{ term.office.get_branch_display }}</span>
+                        · <span>Status: {{ term.get_status_display }}</span>
+                      </div>
                     </div>
                   {% endfor %}
                 </div>
@@ -63,16 +66,33 @@
                         <a class="no-underline" href="{% url 'offices:office_detail' cand.race.office.public_id %}">{{ cand.race.office.name }}</a>
                       </div>
                       <div class="mt-1 text-white/70">
-                        Election date: {{ cand.race.election.date }}
+                        <span class="text-white/90">{{ cand.race.office.jurisdiction.name }}</span>
+                        · Election date: {{ cand.race.election.date }}
                         {% if cand.race.district %}
                           · <a class="no-underline" href="{% url 'geo:district_detail' cand.race.district.public_id %}">{{ cand.race.district }}</a>
                         {% endif %}
+                      </div>
+                      <div class="mt-2 text-xs text-white/60">
+                        <span>{{ cand.race.office.get_level_display }} · {{ cand.race.office.get_branch_display }}</span>
+                        {% if cand.race.seats_up_for_election %} · Seats: {{ cand.race.seats_up_for_election }}{% endif %}
+                        {% if cand.race.ranked_choice %} · Ranked choice{% endif %}
+                        {% if cand.race.has_primary and cand.race.primary_date %} · Primary: {{ cand.race.primary_date }}{% endif %}
+                        {% if cand.race.general_date %} · General: {{ cand.race.general_date }}{% endif %}
                       </div>
                       <div class="mt-2 flex flex-wrap gap-2">
                         <span class="badge">Status: {{ cand.get_status_display }}</span>
                         {% if cand.is_incumbent %}<span class="badge">Incumbent</span>{% endif %}
                         {% if cand.is_challenger %}<span class="badge">Challenger</span>{% endif %}
+                        {% if cand.is_write_in %}<span class="badge">Write-in</span>{% endif %}
+                        {% if cand.endorsement_count %}<span class="badge">Endorsements: {{ cand.endorsement_count }}</span>{% endif %}
                       </div>
+                      {% if cand.race.title or cand.race.about_office or cand.race.body %}
+                        <div class="mt-3 text-xs text-white/60">
+                          {% if cand.race.title %}<div class="font-semibold text-white/80">{{ cand.race.title }}</div>{% endif %}
+                          {% if cand.race.about_office %}<div class="mt-1">{{ cand.race.about_office|truncatechars:220 }}</div>{% endif %}
+                          {% if cand.race.body %}<div class="mt-1">{{ cand.race.body|truncatechars:220 }}</div>{% endif %}
+                        </div>
+                      {% endif %}
                     </div>
                   {% endfor %}
                 </div>
@@ -86,6 +106,23 @@
                 {% if phone %}<div><span class="text-white/60">Phone:</span> {{ phone.value }}</div>{% endif %}
                 {% if website %}<div><span class="text-white/60">Website:</span> <a href="{{ website.value }}">{{ website.value }}</a></div>{% endif %}
                 {% if ballotpedia %}<div><span class="text-white/60">Ballotpedia:</span> <a href="{{ ballotpedia.url }}">{{ ballotpedia.url }}</a></div>{% endif %}
+                {% if contact_methods %}
+                  <div class="pt-2">
+                    <div class="text-xs text-white/50">All public contact methods</div>
+                    <div class="mt-1 space-y-1">
+                      {% for c in contact_methods %}
+                        <div class="text-xs">
+                          <span class="text-white/60">{{ c.label|default:c.get_contact_type_display }}:</span>
+                          {% if c.contact_type == "website" %}
+                            <a href="{{ c.value }}">{{ c.value }}</a>
+                          {% else %}
+                            <span class="text-white/80">{{ c.value }}</span>
+                          {% endif %}
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endif %}
               </div>
             </div>
 

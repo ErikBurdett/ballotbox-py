@@ -14,6 +14,11 @@
                 · <span>{{ c.race.election.date }}</span>
                 {% if c.race.district %} · <span>{{ c.race.district }}</span>{% endif %}
               </div>
+              <div class="mt-1 text-xs text-white/60 truncate">
+                <span>{{ c.race.office.get_level_display }} · {{ c.race.office.get_branch_display }}</span>
+                · <span>{{ c.race.office.jurisdiction.name }}</span>
+                {% if c.race.office.jurisdiction.county %} · <span>{{ c.race.office.jurisdiction.county }} County</span>{% endif %}
+              </div>
             </div>
             <div class="shrink-0 flex flex-col items-end gap-2">
               {% if c.has_video %}<span class="badge">Video</span>{% endif %}
@@ -24,6 +29,12 @@
             <span>Status: {{ c.get_status_display }}</span>
             {% if c.is_incumbent %}<span>· Incumbent</span>{% endif %}
             {% if c.is_challenger %}<span>· Challenger</span>{% endif %}
+            {% if c.is_write_in %}<span>· Write-in</span>{% endif %}
+            {% if c.endorsement_count %}<span>· Endorsements: {{ c.endorsement_count }}</span>{% endif %}
+            {% if c.race.seats_up_for_election %}<span>· Seats: {{ c.race.seats_up_for_election }}</span>{% endif %}
+            {% if c.race.ranked_choice %}<span>· Ranked choice</span>{% endif %}
+            {% if c.race.has_primary and c.race.primary_date %}<span>· Primary: {{ c.race.primary_date }}</span>{% endif %}
+            {% if c.race.general_date %}<span>· General: {{ c.race.general_date }}</span>{% endif %}
             <span>· Updated {{ c.updated_at|naturaltime }}</span>
           </div>
         </a>

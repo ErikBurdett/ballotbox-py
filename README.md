@@ -62,6 +62,16 @@ Load **demo fixtures** into normalized tables + audit `SourceRecord` rows:
 docker compose exec web python manage.py sync_demo
 ```
 
+Note: `sync_demo` runs **local fixtures only**. Democracy Works is synced separately via `sync_democracy_works`.
+
+### Seed everything (fixtures + Democracy Works Texas)
+
+If you have `DEMOCRACY_WORKS_API_KEY` configured, this command seeds demo fixtures and then syncs Democracy Works for **Texas** by default:
+
+```bash
+docker compose exec web python manage.py seed_data --dw-state TX
+```
+
 Then open:
 
 - App: `http://localhost:8000/`
@@ -176,6 +186,73 @@ This repo includes an ingestion “spine” designed for real providers:
 - **Duplicate detection**: creates `MergeReview` records for human review
 
 Provider priority for conflicting fields is defined in `apps/ingestion/priority.py`. Manual overrides on `Person` always win.
+
+## Democracy Works integration
+
+This repo can ingest **Democracy Works Elections API v2** data (elections, contests, candidates). It stores raw payloads as `SourceRecord` rows for auditability.
+
+### Configure
+
+1) Put your key in `.env` (never commit it):
+
+```bash
+DEMOCRACY_WORKS_API_KEY=...your key...
+```
+
+2) Choose a sync scope:
+
+- **State-wide**:
+
+```bash
+DEMOCRACY_WORKS_STATE_CODE=TX
+DEMOCRACY_WORKS_ELECTION_YEAR=2026
+```
+
+- **Optional date range** (state-wide sync only):
+  - If you don’t set dates, the app defaults to the **current election year** (useful for focusing on 2026).
+  - If you set dates, they override `DEMOCRACY_WORKS_ELECTION_YEAR`.
+
+```bash
+# DEMOCRACY_WORKS_START_DATE=2020-01-01
+# DEMOCRACY_WORKS_END_DATE=2029-12-31
+```
+
+- **Address-based** (recommended):
+
+```bash
+DEMOCRACY_WORKS_ADDRESS_STREET=813 Howard Street
+DEMOCRACY_WORKS_ADDRESS_CITY=Oswego
+DEMOCRACY_WORKS_ADDRESS_STATE_CODE=NY
+DEMOCRACY_WORKS_ADDRESS_ZIP=13126
+```
+
+### Run a sync
+
+```bash
+docker compose exec web python manage.py sync_democracy_works
+```
+
+After sync:
+
+- `/candidates/` is populated from contests/candidates.
+- If a DW candidate is flagged as `isIncumbent=true`, the app creates a **reviewable inferred** `OfficeholderTerm` so they can appear in `/officials/` (with a review note).
+
+## Ballotpedia photo enrichment (headshots)
+
+Democracy Works does **not** include headshots directly. When DW provides a `ballotpediaUrl` for a candidate, the app stores it as an `ExternalLink(kind=ballotpedia)` on the `Person`.
+
+You can then enrich `Person.photo_url` by fetching and parsing the Ballotpedia profile page (best-effort) and extracting a likely headshot image URL. Raw results are stored as `SourceRecord` rows for auditability.
+
+Run it manually:
+
+```bash
+docker compose exec web bash -lc "cd /app/src && python manage.py sync_ballotpedia_photos --limit 250 --sleep-ms 300"
+```
+
+Notes:
+- This **never overwrites** `manual_photo_url` (staff override).
+- Placeholder images (e.g. “Submit photo”) are ignored in the UI.
+- The Celery beat schedule runs a **small batch hourly** by default (see `CELERY_BEAT_SCHEDULE` in `settings.py`).
 
 ## Code organization
 

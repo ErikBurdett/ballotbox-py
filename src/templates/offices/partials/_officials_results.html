@@ -11,8 +11,12 @@
               <div class="text-sm font-semibold truncate">{{ term.person.display_name }}</div>
               <div class="mt-1 text-sm text-white/70 truncate">
                 <span class="text-white">{{ term.office.name }}</span>
-                · <span>{{ term.jurisdiction.name }}</span>
+                · <span>{{ term.office.jurisdiction.name }}</span>
                 {% if term.district %} · <span>{{ term.district }}</span>{% endif %}
+              </div>
+              <div class="mt-1 text-xs text-white/60 truncate">
+                <span>{{ term.office.get_level_display }} · {{ term.office.get_branch_display }}</span>
+                {% if term.office.jurisdiction.county %} · <span>{{ term.office.jurisdiction.county }} County</span>{% endif %}
               </div>
             </div>
             <div class="shrink-0 flex flex-col items-end gap-2">

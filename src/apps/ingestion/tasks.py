@@ -4,6 +4,8 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
+from django.core.cache import cache
+from django.core.management import call_command
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models import Count
@@ -17,10 +19,22 @@ from .models import MergeReview, MergeStatus, Provider, SyncRun, SyncStatus
 
 logger = logging.getLogger(__name__)
 
+def _lock_key(provider: str) -> str:
+    return f"lock:sync:{provider}"
+
 
 @shared_task
 def sync_provider(provider: str) -> str:
     provider_value = provider
+    # Prevent overlapping runs of the same provider.
+    lock_key = _lock_key(provider_value)
+    if not cache.add(lock_key, "1", timeout=60 * 60):
+        run = SyncRun.objects.create(provider=provider_value, status=SyncStatus.CANCELLED)
+        run.error_text = "Another sync run for this provider is already in progress."
+        run.finished_at = timezone.now()
+        run.save(update_fields=["error_text", "finished_at", "updated_at"])
+        return run.public_id.hex
+
     run = SyncRun.objects.create(provider=provider_value, status=SyncStatus.RUNNING)
 
     try:
@@ -31,25 +45,70 @@ def sync_provider(provider: str) -> str:
             return run.public_id.hex
 
         adapter = adapters[0]
-        payloads = adapter.fetch()
-        run.stats = {"fetched": len(payloads)}
-        run.save(update_fields=["stats", "updated_at"])
-
+        fetched = 0
         errors = 0
-        for payload in payloads:
+
+        # Prefer streaming fetches for large providers (e.g. Democracy Works state backfills).
+        payload_iter = None
+        if hasattr(adapter, "fetch_iter"):
+            try:
+                payload_iter = adapter.fetch_iter()
+            except Exception as exc:
+                run.status = SyncStatus.FAILED
+                run.error_text = f"Fetch failed for provider={provider_value}: {exc}"
+                run.stats = {"fetched": 0, "errors": 1}
+                return run.public_id.hex
+            run.stats = {"fetched": 0}
+            run.save(update_fields=["stats", "updated_at"])
+        else:
+            try:
+                payloads = adapter.fetch()
+            except Exception as exc:
+                run.status = SyncStatus.FAILED
+                run.error_text = f"Fetch failed for provider={provider_value}: {exc}"
+                run.stats = {"fetched": 0, "errors": 1}
+                return run.public_id.hex
+            if provider_value == Provider.DEMOCRACY_WORKS and not payloads:
+                run.status = SyncStatus.FAILED
+                run.error_text = (
+                    "No DW sync scope configured. Set either DEMOCRACY_WORKS_STATE_CODE "
+                    "or full DEMOCRACY_WORKS_ADDRESS_* values in your environment."
+                )
+                run.stats = {"fetched": 0, "errors": 0}
+                return run.public_id.hex
+            payload_iter = iter(payloads)
+            run.stats = {"fetched": len(payloads)}
+            run.save(update_fields=["stats", "updated_at"])
+
+        for payload in payload_iter or []:
+            fetched += 1
             try:
                 adapter.normalize(payload, sync_run=run)
             except Exception as exc:
                 errors += 1
                 logger.exception("normalize failed provider=%s", provider_value)
                 run.error_text = (run.error_text + "\n" if run.error_text else "") + str(exc)
+            if fetched and fetched % 25 == 0:
+                run.stats = {**(run.stats or {}), "fetched": fetched, "errors": errors}
+                run.save(update_fields=["stats", "updated_at"])
 
-        run.stats = {**(run.stats or {}), "errors": errors}
+        if provider_value == Provider.DEMOCRACY_WORKS and fetched == 0:
+            run.status = SyncStatus.FAILED
+            run.error_text = (
+                "No Democracy Works elections were returned for the configured scope. "
+                "Check DEMOCRACY_WORKS_STATE_CODE / address settings and (optionally) "
+                "DEMOCRACY_WORKS_START_DATE / DEMOCRACY_WORKS_END_DATE."
+            )
+            run.stats = {"fetched": 0, "errors": 0}
+            return run.public_id.hex
+
+        run.stats = {**(run.stats or {}), "fetched": fetched or (run.stats or {}).get("fetched", 0), "errors": errors}
         run.status = SyncStatus.PARTIAL if errors else SyncStatus.SUCCESS
         return run.public_id.hex
     finally:
         run.finished_at = timezone.now()
         run.save(update_fields=["status", "error_text", "stats", "finished_at", "updated_at"])
+        cache.delete(lock_key)
 
 
 @shared_task
@@ -58,6 +117,36 @@ def sync_all_providers() -> list[str]:
     for provider, _label in Provider.choices:
         results.append(sync_provider(provider))
     return results
+
+
+@shared_task
+def sync_ballotpedia_photos_batch(limit: int = 50, sleep_ms: int = 250, fresh_days: int = 30) -> str:
+    """
+    Incremental Ballotpedia photo enrichment.
+
+    This calls the management command (which creates its own SyncRun + SourceRecords)
+    and is intentionally batch-sized to keep the worker responsive.
+    """
+    lock_key = _lock_key("ballotpedia_photos")
+    if not cache.add(lock_key, "1", timeout=60 * 60):
+        return "locked"
+    try:
+        from django.conf import settings
+        state = ""
+        try:
+            state = str((getattr(settings, "DEMOCRACY_WORKS_SYNC", {}) or {}).get("state_code") or "").strip().upper()
+        except Exception:
+            state = ""
+        call_command(
+            "sync_ballotpedia_photos",
+            limit=limit,
+            sleep_ms=sleep_ms,
+            fresh_days=fresh_days,
+            state=state,
+        )
+        return "ok"
+    finally:
+        cache.delete(lock_key)
 
 
 @shared_task
