@@ -120,7 +120,13 @@ def sync_all_providers() -> list[str]:
 
 
 @shared_task
-def sync_ballotpedia_photos_batch(limit: int = 50, sleep_ms: int = 250, fresh_days: int = 30) -> str:
+def sync_ballotpedia_photos_batch(
+    limit: int = 50,
+    sleep_ms: int = 250,
+    fresh_days: int = 30,
+    with_contact: bool = False,
+    only_missing_contact: bool = False,
+) -> str:
     """
     Incremental Ballotpedia photo enrichment.
 
@@ -143,6 +149,8 @@ def sync_ballotpedia_photos_batch(limit: int = 50, sleep_ms: int = 250, fresh_da
             sleep_ms=sleep_ms,
             fresh_days=fresh_days,
             state=state,
+            with_contact=with_contact,
+            only_missing_contact=only_missing_contact,
         )
         return "ok"
     finally:

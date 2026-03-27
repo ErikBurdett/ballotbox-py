@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from datetime import date
 
+from django.conf import settings
 from django.core.paginator import Paginator
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, Max, Min, OuterRef, Q, Subquery
 from django.shortcuts import render
 
 from apps.geo.models import DistrictType, Jurisdiction, JurisdictionType
 from apps.media.models import VideoEmbed
 from apps.offices.models import OfficeBranch, OfficeLevel
-from apps.people.models import ContactMethod, ExternalLink, Party, SocialLink
+from apps.people.models import ContactMethod, ExternalLink, Party, Person, SocialLink
 
 from .models import Candidacy, CandidacyStatus
 
@@ -140,8 +141,6 @@ def candidates_directory(request):
     party = (request.GET.get("party") or "").strip()
 
     election_year = (request.GET.get("election_year") or "").strip()
-    if not election_year:
-        election_year = str(date.today().year)
     election_date = (request.GET.get("election_date") or "").strip()
 
     status = (request.GET.get("status") or "").strip()
@@ -231,21 +230,65 @@ def candidates_directory(request):
     if has_video:
         candidacies = candidacies.filter(has_video=True)
 
-    sort_map = {
-        "election_date": "-race__election__date",
-        "updated": "-updated_at",
-        "name": "person__last_name",
-        "office": "race__office__name",
-    }
-    candidacies = candidacies.order_by(sort_map.get(sort, "-race__election__date"), "id")
+    # One directory row per person; aggregate for sort keys, then prefetch all matching candidacies per page.
+    person_agg = (
+        candidacies.values("person_id")
+        .annotate(
+            max_election_date=Max("race__election__date"),
+            max_updated=Max("updated_at"),
+            min_office_name=Min("race__office__name"),
+        )
+        .annotate(sort_last=Subquery(Person.objects.filter(pk=OuterRef("person_id")).values("last_name")[:1]))
+    )
+    if sort == "election_date":
+        person_agg = person_agg.order_by("-max_election_date", "person_id")
+    elif sort == "updated":
+        person_agg = person_agg.order_by("-max_updated", "person_id")
+    elif sort == "name":
+        person_agg = person_agg.order_by("sort_last", "person_id")
+    elif sort == "office":
+        person_agg = person_agg.order_by("min_office_name", "person_id")
+    else:
+        person_agg = person_agg.order_by("-max_election_date", "person_id")
 
-    paginator = Paginator(candidacies, 20)
+    paginator = Paginator(person_agg, 20)
     page_obj = paginator.get_page(request.GET.get("page") or 1)
+
+    pids = [row["person_id"] for row in page_obj.object_list]
+    by_person: dict[int, list] = {pid: [] for pid in pids}
+    if pids:
+        for cand in (
+            candidacies.filter(person_id__in=pids)
+            .select_related(
+                "person",
+                "race__office",
+                "race__office__jurisdiction",
+                "race__district",
+                "race__election",
+                "race__election__jurisdiction",
+            )
+            .order_by("-race__election__date", "race__office__name", "id")
+        ):
+            by_person[cand.person_id].append(cand)
+
+    directory_rows = []
+    for row in page_obj.object_list:
+        pid = row["person_id"]
+        clist = by_person.get(pid) or []
+        person = clist[0].person if clist else Person.objects.get(pk=pid)
+        directory_rows.append(
+            {
+                "person": person,
+                "candidacies": clist,
+                "has_video": any(getattr(c, "has_video", False) for c in clist),
+            }
+        )
 
     states = Jurisdiction.objects.values_list("state", flat=True).distinct().order_by("state")
 
     context = {
         "page_obj": page_obj,
+        "directory_rows": directory_rows,
         "states": states,
         "canonical_url": request.build_absolute_uri(),
         "jurisdiction_type_choices": JurisdictionType.choices,

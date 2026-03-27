@@ -57,23 +57,47 @@
             </div>
           </div>
         </a>
-        <nav class="flex items-center gap-3 text-sm">
+        <nav class="flex flex-wrap items-center gap-3 text-sm">
           <a class="btn-outline no-underline" href="{% url 'offices:officials_directory' %}">Find Officials</a>
           <a class="btn-outline no-underline" href="{% url 'elections:candidates_directory' %}">Find Candidates</a>
+          <a class="btn-outline no-underline" href="{% url 'submissions:profile_submit' %}">Submit profile</a>
           <a class="text-white/80 hover:text-white" href="{% url 'search:global_search' %}">Search</a>
+          <a class="text-white/80 hover:text-white" href="{% url 'core:privacy' %}">Privacy</a>
+          <a class="text-white/80 hover:text-white" href="{% url 'core:terms' %}">Terms</a>
         </nav>
       </div>
     </header>
 
     <main>
+      {% if messages %}
+        <div class="container-padded pt-6 space-y-2">
+          {% for message in messages %}
+            <div class="surface px-4 py-3 text-sm {% if message.tags == 'error' %}border-patriot-red/40{% elif message.tags == 'success' %}border-emerald-400/30{% elif message.tags == 'warning' %}border-amber-400/30{% else %}border-white/10{% endif %} border" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
       {% block content %}{% endblock %}
     </main>
 
     <footer class="border-t border-white/10 mt-16">
       <div class="container-padded py-10 text-sm text-white/60">
-        <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-          <div>© {{ SITE_NAME }}</div>
-          <div class="text-white/50">Demo data only unless you run sync jobs.</div>
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div>© {{ SITE_NAME }}</div>
+            <div class="mt-2 text-white/50">Demo data only unless you run sync jobs.</div>
+            <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-white/70">
+              <a class="hover:text-white" href="{% url 'core:privacy' %}">Privacy Policy</a>
+              <a class="hover:text-white" href="{% url 'core:terms' %}">Terms &amp; Conditions</a>
+              <a class="hover:text-white" href="{% url 'submissions:profile_submit' %}">Submit profile</a>
+              <a class="hover:text-white" href="mailto:{{ CONTACT_EMAIL }}">Contact</a>
+            </div>
+          </div>
+          <p class="max-w-md text-xs text-white/45 leading-relaxed">
+            This site is informational. We do not collect phone numbers on-site for SMS. A live Privacy Policy and Terms
+            page support organizational compliance checklists (e.g. carrier 10DLC / related website documentation).
+          </p>
         </div>
       </div>
     </footer>

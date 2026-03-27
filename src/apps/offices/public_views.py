@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+from django.conf import settings
 from django.core.paginator import Paginator
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, Max, Min, OuterRef, Q, Subquery
 from django.shortcuts import render
 
 from apps.elections.models import OfficeholderTerm, TermStatus
 from apps.geo.models import DistrictType, Jurisdiction, JurisdictionType
 from apps.media.models import VideoEmbed
-from apps.people.models import ContactMethod, ExternalLink, Party, SocialLink
+from apps.people.models import ContactMethod, ExternalLink, Party, Person, SocialLink
 
 from .models import OfficeBranch, OfficeLevel
 
@@ -107,6 +108,11 @@ def _apply_global_search_terms(qs, query: str):
 def officials_directory(request):
     q = (request.GET.get("q") or "").strip()
     state = (request.GET.get("state") or "").strip().upper()
+    if not state:
+        try:
+            state = str((getattr(settings, "DEMOCRACY_WORKS_SYNC", {}) or {}).get("state_code") or "").strip().upper()
+        except Exception:
+            state = ""
     county = _norm_county(request.GET.get("county") or "")
     city = _norm_spaces(request.GET.get("city") or "")
     jurisdiction_type = (request.GET.get("jurisdiction_type") or "").strip()
@@ -176,21 +182,58 @@ def officials_directory(request):
     if has_video:
         terms = terms.filter(has_video=True)
 
-    sort_map = {
-        "updated": "-updated_at",
-        "name": "person__last_name",
-        "office": "office__name",
-        "jurisdiction": "jurisdiction__name",
-    }
-    terms = terms.order_by(sort_map.get(sort, "-updated_at"), "id")
+    # One directory row per person; aggregate for sort keys, then prefetch all matching terms per page.
+    person_agg = (
+        terms.values("person_id")
+        .annotate(
+            max_updated=Max("updated_at"),
+            min_office_name=Min("office__name"),
+            min_jurisdiction_name=Min("office__jurisdiction__name"),
+        )
+        .annotate(sort_last=Subquery(Person.objects.filter(pk=OuterRef("person_id")).values("last_name")[:1]))
+    )
+    if sort == "updated":
+        person_agg = person_agg.order_by("-max_updated", "person_id")
+    elif sort == "name":
+        person_agg = person_agg.order_by("sort_last", "person_id")
+    elif sort == "office":
+        person_agg = person_agg.order_by("min_office_name", "person_id")
+    elif sort == "jurisdiction":
+        person_agg = person_agg.order_by("min_jurisdiction_name", "person_id")
+    else:
+        person_agg = person_agg.order_by("-max_updated", "person_id")
 
-    paginator = Paginator(terms, 20)
+    paginator = Paginator(person_agg, 20)
     page_obj = paginator.get_page(request.GET.get("page") or 1)
+
+    pids = [row["person_id"] for row in page_obj.object_list]
+    by_person: dict[int, list] = {pid: [] for pid in pids}
+    if pids:
+        for term in (
+            terms.filter(person_id__in=pids)
+            .select_related("person", "office", "office__jurisdiction", "district", "jurisdiction")
+            .order_by("-updated_at", "office__name", "id")
+        ):
+            by_person[term.person_id].append(term)
+
+    directory_rows = []
+    for row in page_obj.object_list:
+        pid = row["person_id"]
+        tlist = by_person.get(pid) or []
+        person = tlist[0].person if tlist else Person.objects.get(pk=pid)
+        directory_rows.append(
+            {
+                "person": person,
+                "terms": tlist,
+                "has_video": any(getattr(t, "has_video", False) for t in tlist),
+            }
+        )
 
     states = Jurisdiction.objects.values_list("state", flat=True).distinct().order_by("state")
 
     context = {
         "page_obj": page_obj,
+        "directory_rows": directory_rows,
         "states": states,
         "canonical_url": request.build_absolute_uri(),
         "jurisdiction_type_choices": JurisdictionType.choices,

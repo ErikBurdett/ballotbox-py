@@ -84,6 +84,7 @@
                     {% if s.source_url %}
                       <div class="text-xs text-white/60 truncate">URL: <a href="{{ s.source_url }}">{{ s.source_url }}</a></div>
                     {% endif %}
+                    <div class="text-xs text-white/60 truncate">JSON: <a href="{% url 'api:source_record_detail' s.public_id %}">View payload</a></div>
                   </div>
                   <div class="text-xs text-white/60 shrink-0">Fetched {{ s.fetched_at|naturaltime }}</div>
                 </div>

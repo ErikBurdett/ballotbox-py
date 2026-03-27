@@ -13,6 +13,10 @@ env = environ.Env(
     DJANGO_SECRET_KEY=(str, ""),
     DJANGO_ALLOWED_HOSTS=(list, []),
     DJANGO_CSRF_TRUSTED_ORIGINS=(list, []),
+    DEFAULT_FROM_EMAIL=(str, "noreply@patriotsinaction.com"),
+    SUBMISSIONS_NOTIFY_EMAIL=(str, "erik@patriotsinaction.com"),
+    SUBMISSIONS_STAFF_PIN=(str, "12341234"),
+    SUBMISSIONS_EMAIL_SUBJECT_PREFIX=(str, "The Ballot Box"),
     DATABASE_URL=(str, ""),
     REDIS_URL=(str, ""),
     CELERY_BROKER_URL=(str, ""),
@@ -56,6 +60,7 @@ INSTALLED_APPS = [
     "apps.search.apps.SearchConfig",
     "apps.ingestion.apps.IngestionConfig",
     "apps.api.apps.ApiConfig",
+    "apps.submissions.apps.SubmissionsConfig",
 ]
 
 MIDDLEWARE = [
@@ -130,6 +135,10 @@ else:
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+SUBMISSIONS_NOTIFY_EMAIL = env("SUBMISSIONS_NOTIFY_EMAIL")
+SUBMISSIONS_STAFF_PIN = env("SUBMISSIONS_STAFF_PIN")
+SUBMISSIONS_EMAIL_SUBJECT_PREFIX = env("SUBMISSIONS_EMAIL_SUBJECT_PREFIX")
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = not DEBUG
@@ -156,7 +165,9 @@ CELERY_BEAT_SCHEDULE = {
     "sync-ballotpedia-photos-hourly": {
         "task": "apps.ingestion.tasks.sync_ballotpedia_photos_batch",
         "schedule": 60 * 60,
-        "args": [50, 250, 30],
+        # Keep it incremental. When scoped to a state (e.g. TX) this gradually improves
+        # photos + public contact links without hammering Ballotpedia.
+        "args": [50, 300, 30, True, True],
     },
     "detect-duplicates-hourly": {
         "task": "apps.ingestion.tasks.detect_person_duplicates",

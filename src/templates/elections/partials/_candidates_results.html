@@ -2,42 +2,61 @@
 {% load humanize %}
 
 <div class="surface p-6">
-  {% if page_obj.object_list %}
+  {% if directory_rows %}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {% for c in page_obj.object_list %}
-        <a class="surface p-5 bg-white/5 border-white/10 shadow-none no-underline hover:bg-white/10 transition" href="{% url 'people:person_detail' c.person.public_id %}">
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <div class="text-sm font-semibold truncate">{{ c.person.display_name }}</div>
-              <div class="mt-1 text-sm text-white/70 truncate">
-                <span class="text-white">{{ c.race.office.name }}</span>
-                · <span>{{ c.race.election.date }}</span>
-                {% if c.race.district %} · <span>{{ c.race.district }}</span>{% endif %}
+      {% for row in directory_rows %}
+        <div class="surface p-5 bg-white/5 border-white/10 shadow-none hover:bg-white/10 transition">
+          <a class="no-underline flex items-start justify-between gap-3" href="{% url 'people:person_detail' row.person.public_id %}">
+            <div class="min-w-0 flex gap-4">
+              <div class="h-12 w-12 rounded-xl bg-white/10 overflow-hidden shrink-0 flex items-center justify-center text-sm font-semibold text-white/70">
+                {% if row.person.display_photo_url %}
+                  <img class="h-full w-full object-cover" src="{{ row.person.display_photo_url }}" alt="Headshot of {{ row.person.display_name }}" loading="lazy">
+                {% else %}
+                  {{ row.person.display_name|slice:":1" }}
+                {% endif %}
               </div>
-              <div class="mt-1 text-xs text-white/60 truncate">
-                <span>{{ c.race.office.get_level_display }} · {{ c.race.office.get_branch_display }}</span>
-                · <span>{{ c.race.office.jurisdiction.name }}</span>
-                {% if c.race.office.jurisdiction.county %} · <span>{{ c.race.office.jurisdiction.county }} County</span>{% endif %}
+              <div class="min-w-0">
+                <div class="text-sm font-semibold truncate text-white">{{ row.person.display_name }}</div>
+                <div class="mt-1 text-xs text-white/50">Profile · {{ row.candidacies|length }} race{{ row.candidacies|length|pluralize }}</div>
               </div>
             </div>
             <div class="shrink-0 flex flex-col items-end gap-2">
-              {% if c.has_video %}<span class="badge">Video</span>{% endif %}
-              <span class="badge">{{ c.display_party }}</span>
+              {% if row.has_video %}<span class="badge">Video</span>{% endif %}
             </div>
+          </a>
+
+          <div class="mt-4 space-y-3">
+            {% for c in row.candidacies %}
+              <div class="{% if not forloop.first %}border-t border-white/10 pt-3{% endif %}">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0 text-sm text-white/70">
+                    <span class="text-white font-medium">{{ c.race.office.name }}</span>
+                    · <span>{{ c.race.election.date }}</span>
+                    {% if c.race.district %} · <span>{{ c.race.district }}</span>{% endif %}
+                  </div>
+                  <span class="badge shrink-0">{{ c.display_party }}</span>
+                </div>
+                <div class="mt-1 text-xs text-white/60 truncate">
+                  <span>{{ c.race.office.get_level_display }} · {{ c.race.office.get_branch_display }}</span>
+                  · <span>{{ c.race.office.jurisdiction.name }}</span>
+                  {% if c.race.office.jurisdiction.county %} · <span>{{ c.race.office.jurisdiction.county }} County</span>{% endif %}
+                </div>
+                <div class="mt-2 flex flex-wrap gap-2 text-xs text-white/60">
+                  <span>Status: {{ c.get_status_display }}</span>
+                  {% if c.is_incumbent %}<span>· Incumbent</span>{% endif %}
+                  {% if c.is_challenger %}<span>· Challenger</span>{% endif %}
+                  {% if c.is_write_in %}<span>· Write-in</span>{% endif %}
+                  {% if c.endorsement_count %}<span>· Endorsements: {{ c.endorsement_count }}</span>{% endif %}
+                  {% if c.race.seats_up_for_election %}<span>· Seats: {{ c.race.seats_up_for_election }}</span>{% endif %}
+                  {% if c.race.ranked_choice %}<span>· Ranked choice</span>{% endif %}
+                  {% if c.race.has_primary and c.race.primary_date %}<span>· Primary: {{ c.race.primary_date }}</span>{% endif %}
+                  {% if c.race.general_date %}<span>· General: {{ c.race.general_date }}</span>{% endif %}
+                  <span>· Updated {{ c.updated_at|naturaltime }}</span>
+                </div>
+              </div>
+            {% endfor %}
           </div>
-          <div class="mt-3 flex flex-wrap gap-2 text-xs text-white/60">
-            <span>Status: {{ c.get_status_display }}</span>
-            {% if c.is_incumbent %}<span>· Incumbent</span>{% endif %}
-            {% if c.is_challenger %}<span>· Challenger</span>{% endif %}
-            {% if c.is_write_in %}<span>· Write-in</span>{% endif %}
-            {% if c.endorsement_count %}<span>· Endorsements: {{ c.endorsement_count }}</span>{% endif %}
-            {% if c.race.seats_up_for_election %}<span>· Seats: {{ c.race.seats_up_for_election }}</span>{% endif %}
-            {% if c.race.ranked_choice %}<span>· Ranked choice</span>{% endif %}
-            {% if c.race.has_primary and c.race.primary_date %}<span>· Primary: {{ c.race.primary_date }}</span>{% endif %}
-            {% if c.race.general_date %}<span>· General: {{ c.race.general_date }}</span>{% endif %}
-            <span>· Updated {{ c.updated_at|naturaltime }}</span>
-          </div>
-        </a>
+        </div>
       {% endfor %}
     </div>
 
@@ -56,4 +75,3 @@
     <div class="text-sm text-white/60">No results. Try relaxing filters.</div>
   {% endif %}
 </div>
-

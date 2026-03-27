@@ -215,8 +215,15 @@ def _record_source(
     payload: dict[str, Any],
     normalized_obj: Any | None,
     fetched_at: datetime,
+    source_url: str = "",
 ) -> None:
     sha = SourceRecord.compute_sha256(payload)
+    su = (source_url or "").strip()
+    if not su:
+        try:
+            su = str(payload.get("canonicalUrl") or payload.get("canonical_url") or "").strip()
+        except Exception:
+            su = ""
     sr, _ = SourceRecord.objects.get_or_create(
         provider=Provider.DEMOCRACY_WORKS,
         external_id=external_id,
@@ -224,11 +231,14 @@ def _record_source(
         defaults={
             "payload": payload,
             "fetched_at": fetched_at,
-            "source_url": "",
+            "source_url": su,
             "source_name": "Democracy Works",
             "sync_run": sync_run,
         },
     )
+    if su and sr.source_url != su:
+        sr.source_url = su
+        sr.save(update_fields=["source_url", "updated_at"])
     if normalized_obj is not None:
         ct = ContentType.objects.get_for_model(normalized_obj.__class__)
         if sr.normalized_content_type_id != ct.id or sr.normalized_object_id != normalized_obj.id:
@@ -527,16 +537,18 @@ def normalize_dw_candidate(*, sync_run: SyncRun, race: Race, candidate_payload: 
         )
 
     socials = {
-        SocialPlatform.FACEBOOK: campaign.get("facebook"),
-        SocialPlatform.TWITTER: campaign.get("twitter"),
-        SocialPlatform.INSTAGRAM: campaign.get("instagram"),
-        SocialPlatform.YOUTUBE: campaign.get("youtube"),
-        SocialPlatform.LINKEDIN: campaign.get("linkedIn"),
+        SocialPlatform.FACEBOOK: [campaign.get("facebook"), personal.get("facebook")],
+        SocialPlatform.TWITTER: [campaign.get("twitter"), personal.get("twitter")],
+        SocialPlatform.INSTAGRAM: [campaign.get("instagram"), personal.get("instagram")],
+        SocialPlatform.YOUTUBE: [campaign.get("youtube"), personal.get("youtube")],
+        SocialPlatform.LINKEDIN: [campaign.get("linkedIn"), personal.get("linkedIn")],
     }
-    for platform, raw in socials.items():
-        url = _maybe_social_url(platform, str(raw or ""))
-        if url:
-            SocialLink.objects.get_or_create(person=person, platform=platform, url=url)
+    for platform, raws in socials.items():
+        for raw in raws:
+            url = _maybe_social_url(platform, str(raw or ""))
+            if url:
+                SocialLink.objects.get_or_create(person=person, platform=platform, url=url)
+                break
 
     is_incumbent = bool(candidate_payload.get("isIncumbent") or False)
     is_write_in = bool(candidate_payload.get("isWriteIn") or False)

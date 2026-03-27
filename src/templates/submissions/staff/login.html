@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Submissions console · {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+  <section class="container-padded pt-10 pb-16 max-w-md">
+    <div class="surface p-8">
+      <h1 class="text-xl font-semibold">Profile submissions</h1>
+      <p class="mt-2 text-sm text-white/60">Enter the staff access code to review public submissions.</p>
+      <form method="post" class="mt-6 space-y-4">
+        {% csrf_token %}
+        <div>
+          <label class="block text-xs text-white/60 mb-1" for="{{ form.access_code.id_for_label }}">{{ form.access_code.label }}</label>
+          {{ form.access_code }}
+          {{ form.access_code.errors }}
+        </div>
+        <button type="submit" class="btn w-full sm:w-auto">Sign in</button>
+      </form>
+    </div>
+  </section>
+{% endblock %}

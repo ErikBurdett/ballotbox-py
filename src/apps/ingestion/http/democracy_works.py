@@ -5,7 +5,9 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 from urllib.parse import urlencode
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+import time
 
 
 class DemocracyWorksError(RuntimeError):
@@ -42,16 +44,61 @@ class DemocracyWorksClient:
             },
             method="GET",
         )
-        try:
-            with urlopen(req, timeout=self.timeout_s) as resp:
-                body = resp.read().decode("utf-8", "ignore")
-        except Exception as exc:
-            raise DemocracyWorksError(f"DW request failed: {path}") from exc
+        last_exc: Exception | None = None
+        for attempt in range(5):
+            status: int | None = None
+            body = ""
+            retry_after_s: float = 0.0
+            try:
+                with urlopen(req, timeout=self.timeout_s) as resp:
+                    try:
+                        status = int(getattr(resp, "status", None) or resp.getcode() or 0) or None
+                    except Exception:
+                        status = None
+                    retry_after = str(resp.headers.get("retry-after") or "").strip()
+                    if retry_after.isdigit():
+                        retry_after_s = float(int(retry_after))
+                    body = resp.read().decode("utf-8", "ignore")
+            except HTTPError as exc:
+                last_exc = exc
+                status = int(getattr(exc, "code", None) or 0) or None
+                try:
+                    body = (exc.read() or b"").decode("utf-8", "ignore")
+                except Exception:
+                    body = ""
+                retry_after = str(getattr(exc, "headers", {}).get("retry-after") if getattr(exc, "headers", None) else "").strip()
+                if retry_after.isdigit():
+                    retry_after_s = float(int(retry_after))
+            except (TimeoutError, URLError) as exc:
+                last_exc = exc
+                status = None
+            except Exception as exc:
+                last_exc = exc
+                status = None
+
+            # Retry policy (gentle backoff for rate limiting / transient upstream errors).
+            if status in {429, 500, 502, 503, 504}:
+                if attempt < 4:
+                    sleep_s = max(retry_after_s, 0.5 * (attempt + 1))
+                    time.sleep(sleep_s)
+                    continue
+            if status is None and last_exc is not None:
+                if attempt < 4:
+                    time.sleep(0.5 * (attempt + 1))
+                    continue
+                raise DemocracyWorksError(f"DW request failed: {path}") from last_exc
+            if status and status >= 400:
+                # Provide context for debugging / telemetry.
+                snippet = (body or "").strip().replace("\n", " ")[:240]
+                raise DemocracyWorksError(f"DW HTTP {status} for {path}. body={snippet}")
+            # Success path: body should be JSON.
+            break
 
         try:
             data = json.loads(body)
         except Exception as exc:
-            raise DemocracyWorksError("DW returned invalid JSON.") from exc
+            snippet = (body or "").strip().replace("\n", " ")[:240]
+            raise DemocracyWorksError(f"DW returned invalid JSON. body={snippet}") from exc
         return data
 
     def list_elections(self, *, params: dict[str, Any]) -> tuple[list[dict[str, Any]], Pagination | None]:
@@ -71,6 +118,94 @@ class DemocracyWorksClient:
         if not isinstance(elections, list):
             elections = []
         return elections, pagination
+
+    def get_candidate(self, *, candidate_id: str) -> dict[str, Any]:
+        """
+        Fetch a single candidate by id.
+
+        The DW API has historically returned either:
+        - {"data": {"candidates": {...}}}
+        - {...candidate...} (top-level object)
+        """
+        cid = (candidate_id or "").strip()
+        if not cid:
+            raise DemocracyWorksError("candidate_id is required.")
+        payload = self._request(f"/candidates/{cid}")
+        # Wrapped shape
+        try:
+            wrapped = (payload.get("data") or {}).get("candidates")  # type: ignore[union-attr]
+        except Exception:
+            wrapped = None
+        if isinstance(wrapped, dict) and str(wrapped.get("id") or "").strip():
+            return wrapped
+        # Top-level shape
+        if isinstance(payload, dict) and str(payload.get("id") or "").strip():
+            return payload
+        return {}
+
+    def list_endorsements_bulk_by_matching_entity(
+        self,
+        *,
+        candidate_id: str = "",
+        ballot_measure_id: str = "",
+        page: int = 1,
+        page_size: int = 50,
+    ) -> tuple[list[dict[str, Any]], Pagination | None]:
+        """
+        Fetch endorsements by candidateId OR ballotMeasureId.
+        """
+        cid = (candidate_id or "").strip()
+        bid = (ballot_measure_id or "").strip()
+        if bool(cid) == bool(bid):
+            raise DemocracyWorksError("Provide exactly one of candidate_id or ballot_measure_id.")
+        params: dict[str, Any] = {"page": max(1, int(page or 1)), "pageSize": min(max(1, int(page_size or 50)), 100)}
+        if cid:
+            params["candidateId"] = cid
+        if bid:
+            params["ballotMeasureId"] = bid
+
+        payload = self._request("/endorsements/bulk/byMatchingEntity", params=params)
+        data = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(data, list):
+            data = []
+        pag = payload.get("pagination") if isinstance(payload, dict) else None
+        pagination = None
+        if isinstance(pag, dict):
+            try:
+                pagination = Pagination(
+                    total_record_count=int(pag.get("totalRecordCount") or pag.get("total_record_count") or 0),
+                    current_page=int(pag.get("currentPage") or pag.get("current_page") or 1),
+                    page_size=int(pag.get("pageSize") or pag.get("page_size") or params["pageSize"]),
+                )
+            except Exception:
+                pagination = None
+        return data, pagination
+
+    def iter_endorsements_by_candidate(self, *, candidate_id: str, page_size: int = 50, max_pages: int = 10):
+        """
+        Stream endorsements for a candidate across pages.
+        """
+        cid = (candidate_id or "").strip()
+        if not cid:
+            return iter([])
+
+        def _gen():
+            page = 1
+            while True:
+                batch, pagination = self.list_endorsements_bulk_by_matching_entity(
+                    candidate_id=cid, page=page, page_size=page_size
+                )
+                for row in batch:
+                    yield row
+                if not pagination:
+                    break
+                if pagination.current_page * pagination.page_size >= pagination.total_record_count:
+                    break
+                page += 1
+                if max_pages and page > max_pages:
+                    break
+
+        return _gen()
 
     def iter_elections(self, *, params: dict[str, Any]) -> tuple[int, Any]:
         """

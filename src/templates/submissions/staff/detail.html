@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Submission #{{ submission.pk }} · {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+  <section class="container-padded pt-10 pb-16">
+    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+      <div>
+        <p class="text-xs text-white/50 uppercase tracking-wide"><a class="hover:text-white" href="{% url 'submissions:staff_list' %}">← Queue</a></p>
+        <h1 class="mt-2 text-2xl font-semibold">Submission #{{ submission.pk }}</h1>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <span class="badge">{{ submission.get_status_display }}</span>
+          <span class="badge">{{ submission.get_profile_role_display }}</span>
+          <span class="badge">Received {{ submission.created_at|naturaltime }}</span>
+        </div>
+      </div>
+      <form method="post" action="{% url 'submissions:staff_logout' %}" class="shrink-0">
+        {% csrf_token %}
+        <button type="submit" class="btn-outline text-sm">Sign out</button>
+      </form>
+    </div>
+
+    {% if submission.created_person %}
+      <div class="mt-6 surface p-4 text-sm">
+        <span class="text-white/60">Draft person:</span>
+        <a class="text-white hover:underline ml-1" href="{% url 'people:person_detail' submission.created_person.public_id %}">Public profile</a>
+        <span class="text-white/40 mx-2">·</span>
+        <span class="text-white/60">Review status: {{ submission.created_person.get_review_status_display }}</span>
+      </div>
+    {% endif %}
+
+    <div class="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-7 space-y-6">
+        <div class="surface p-6 text-sm space-y-3">
+          <h2 class="text-lg font-semibold">Submitter</h2>
+          <div><span class="text-white/60">Name:</span> {{ submission.submitter_name|default:"—" }}</div>
+          <div><span class="text-white/60">Email:</span> {{ submission.submitter_email }}</div>
+        </div>
+
+        <div class="surface p-6 text-sm space-y-3">
+          <h2 class="text-lg font-semibold">Office context</h2>
+          <div><span class="text-white/60">Office:</span> {{ submission.office_name|default:"—" }}</div>
+          <div><span class="text-white/60">Jurisdiction:</span> {{ submission.jurisdiction_name|default:"—" }}</div>
+          <div><span class="text-white/60">District:</span> {{ submission.district_name|default:"—" }}</div>
+          <div><span class="text-white/60">Election date:</span> {{ submission.election_date|default:"—" }}</div>
+          {% if submission.race_or_role_notes %}
+            <div class="pt-2 border-t border-white/10 whitespace-pre-wrap">{{ submission.race_or_role_notes }}</div>
+          {% endif %}
+        </div>
+
+        <div class="surface p-6 text-sm space-y-3">
+          <h2 class="text-lg font-semibold">Identity &amp; party</h2>
+          <div><span class="text-white/60">Display name:</span> {{ submission.display_submitted_name }}</div>
+          <div><span class="text-white/60">Legal name:</span> {{ submission.first_name }} {{ submission.middle_name }} {{ submission.last_name }} {{ submission.suffix }}</div>
+          <div><span class="text-white/60">Preferred:</span> {{ submission.preferred_name|default:"—" }}</div>
+          <div><span class="text-white/60">Party:</span> {{ submission.get_party_display }}{% if submission.party_other %} ({{ submission.party_other }}){% endif %}</div>
+          <div><span class="text-white/60">Overrides:</span> manual name {{ submission.manual_display_name|default:"—" }} · manual party {{ submission.manual_party|default:"—" }}</div>
+          <div><span class="text-white/60">Photo URL:</span> {% if submission.photo_url %}<a class="hover:underline" href="{{ submission.photo_url }}">{{ submission.photo_url }}</a>{% else %}—{% endif %}</div>
+          <div><span class="text-white/60">Photo override:</span> {% if submission.manual_photo_url %}<a class="hover:underline" href="{{ submission.manual_photo_url }}">{{ submission.manual_photo_url }}</a>{% else %}—{% endif %}</div>
+        </div>
+
+        <div class="surface p-6 text-sm space-y-2">
+          <h2 class="text-lg font-semibold">Contact &amp; links</h2>
+          <div><span class="text-white/60">Email:</span> {{ submission.contact_email|default:"—" }}</div>
+          <div><span class="text-white/60">Phone:</span> {{ submission.contact_phone|default:"—" }}</div>
+          <div><span class="text-white/60">Website:</span> {% if submission.contact_website %}<a class="hover:underline" href="{{ submission.contact_website }}">{{ submission.contact_website }}</a>{% else %}—{% endif %}</div>
+          <div><span class="text-white/60">Ballotpedia:</span> {% if submission.link_ballotpedia %}<a class="hover:underline" href="{{ submission.link_ballotpedia }}">{{ submission.link_ballotpedia }}</a>{% else %}—{% endif %}</div>
+          <div><span class="text-white/60">Wikipedia:</span> {% if submission.link_wikipedia %}<a class="hover:underline" href="{{ submission.link_wikipedia }}">{{ submission.link_wikipedia }}</a>{% else %}—{% endif %}</div>
+          <div><span class="text-white/60">Official site:</span> {% if submission.link_official_site %}<a class="hover:underline" href="{{ submission.link_official_site }}">{{ submission.link_official_site }}</a>{% else %}—{% endif %}</div>
+        </div>
+
+        <div class="surface p-6 text-sm space-y-2">
+          <h2 class="text-lg font-semibold">Social</h2>
+          <div><span class="text-white/60">X:</span> {% if submission.social_x %}<a class="hover:underline" href="{{ submission.social_x }}">{{ submission.social_x }}</a>{% else %}—{% endif %}</div>
+          <div><span class="text-white/60">Facebook:</span> {% if submission.social_facebook %}<a class="hover:underline" href="{{ submission.social_facebook }}">{{ submission.social_facebook }}</a>{% else %}—{% endif %}</div>
+          <div><span class="text-white/60">Instagram:</span> {% if submission.social_instagram %}<a class="hover:underline" href="{{ submission.social_instagram }}">{{ submission.social_instagram }}</a>{% else %}—{% endif %}</div>
+          <div><span class="text-white/60">YouTube:</span> {% if submission.social_youtube %}<a class="hover:underline" href="{{ submission.social_youtube }}">{{ submission.social_youtube }}</a>{% else %}—{% endif %}</div>
+          <div><span class="text-white/60">TikTok:</span> {% if submission.social_tiktok %}<a class="hover:underline" href="{{ submission.social_tiktok }}">{{ submission.social_tiktok }}</a>{% else %}—{% endif %}</div>
+          <div><span class="text-white/60">LinkedIn:</span> {% if submission.social_linkedin %}<a class="hover:underline" href="{{ submission.social_linkedin }}">{{ submission.social_linkedin }}</a>{% else %}—{% endif %}</div>
+        </div>
+
+        <div class="surface p-6 text-sm space-y-2">
+          <h2 class="text-lg font-semibold">Video &amp; notes</h2>
+          <div><span class="text-white/60">Interview URL:</span> {% if submission.video_interview_url %}<a class="hover:underline" href="{{ submission.video_interview_url }}">{{ submission.video_interview_url }}</a>{% else %}—{% endif %}</div>
+          {% if submission.additional_notes %}
+            <div class="pt-2 border-t border-white/10 whitespace-pre-wrap">{{ submission.additional_notes }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="lg:col-span-5">
+        <div class="surface p-6 sticky top-24">
+          <h2 class="text-lg font-semibold">Decision</h2>
+          {% if submission.status == "pending" %}
+            <p class="mt-2 text-sm text-white/60">
+              Approving creates a new <strong class="text-white">Person</strong> in “needs review” with attached contacts, links, social rows, and an unapproved YouTube embed if provided.
+              Link the record to offices or candidacies in Django admin as needed.
+            </p>
+            <form method="post" class="mt-5 space-y-4">
+              {% csrf_token %}
+              <div>
+                <label class="block text-xs text-white/60 mb-1" for="{{ notes_form.review_notes.id_for_label }}">Internal notes</label>
+                {{ notes_form.review_notes }}
+              </div>
+              <div class="flex flex-col sm:flex-row gap-3">
+                <button class="btn bg-emerald-600 hover:bg-emerald-500 border-0" type="submit" name="action" value="approve">Approve &amp; create draft</button>
+                <button class="btn-outline border-patriot-red/40 text-patriot-red" type="submit" name="action" value="reject">Reject</button>
+              </div>
+            </form>
+          {% else %}
+            <p class="mt-2 text-sm text-white/60">This submission was finalized {{ submission.reviewed_at|naturaltime }}.</p>
+            {% if submission.review_notes %}
+              <div class="mt-4 text-sm whitespace-pre-wrap border-t border-white/10 pt-4">{{ submission.review_notes }}</div>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}

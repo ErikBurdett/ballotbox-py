@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Submit a profile · {{ SITE_NAME }}{% endblock %}
+
+{% block meta_description %}Submit candidate or official profile updates for editorial review before publication.{% endblock %}
+
+{% block content %}
+  <section class="container-padded pt-10 pb-16">
+    <div class="max-w-3xl">
+      <h1 class="text-2xl sm:text-3xl font-semibold">Submit a candidate or official profile</h1>
+      <p class="mt-3 text-sm text-white/70">
+        Use this form to send the same kinds of information we show on public profiles: name, party, office context,
+        contact methods, reference links, social profiles, and an optional approved-style video interview (YouTube only).
+        Submissions are reviewed before any data appears live.
+      </p>
+    </div>
+
+    <form method="post" class="mt-8 space-y-8 max-w-3xl">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="surface p-4 text-sm text-patriot-red">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="surface p-6 space-y-4">
+        <h2 class="text-lg font-semibold">Your contact</h2>
+        <p class="text-sm text-white/60">We use this to reach you if we need clarification.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.submitter_name.id_for_label }}">Your name</label>
+            {{ form.submitter_name }}
+            {{ form.submitter_name.errors }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.submitter_email.id_for_label }}">Your email</label>
+            {{ form.submitter_email }}
+            {{ form.submitter_email.errors }}
+          </div>
+        </div>
+      </div>
+
+      <div class="surface p-6 space-y-4">
+        <h2 class="text-lg font-semibold">Role &amp; office context</h2>
+        <div>
+          <label class="block text-xs text-white/60 mb-1" for="{{ form.profile_role.id_for_label }}">Profile type</label>
+          {{ form.profile_role }}
+          {{ form.profile_role.errors }}
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.office_name.id_for_label }}">Office title</label>
+            {{ form.office_name }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.jurisdiction_name.id_for_label }}">Jurisdiction (state, county, city, etc.)</label>
+            {{ form.jurisdiction_name }}
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.district_name.id_for_label }}">District (if applicable)</label>
+            {{ form.district_name }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.election_date.id_for_label }}">Election date (candidates)</label>
+            {{ form.election_date }}
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1" for="{{ form.race_or_role_notes.id_for_label }}">Race / role notes</label>
+          {{ form.race_or_role_notes }}
+          <p class="mt-1 text-xs text-white/50">e.g. ballot language, term dates, or how you appear on the ballot.</p>
+        </div>
+      </div>
+
+      <div class="surface p-6 space-y-4">
+        <h2 class="text-lg font-semibold">Legal name &amp; party</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.first_name.id_for_label }}">First name</label>
+            {{ form.first_name }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.middle_name.id_for_label }}">Middle name</label>
+            {{ form.middle_name }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.last_name.id_for_label }}">Last name</label>
+            {{ form.last_name }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.suffix.id_for_label }}">Suffix</label>
+            {{ form.suffix }}
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1" for="{{ form.preferred_name.id_for_label }}">Preferred / ballot name (if different)</label>
+          {{ form.preferred_name }}
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.party.id_for_label }}">Party</label>
+            {{ form.party }}
+            {{ form.party.errors }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.party_other.id_for_label }}">Other party (if applicable)</label>
+            {{ form.party_other }}
+            {{ form.party_other.errors }}
+          </div>
+        </div>
+      </div>
+
+      <div class="surface p-6 space-y-4">
+        <h2 class="text-lg font-semibold">Display overrides (optional)</h2>
+        <p class="text-sm text-white/60">Shown on the public profile when set; otherwise we derive display from the fields above.</p>
+        <div>
+          <label class="block text-xs text-white/60 mb-1" for="{{ form.manual_display_name.id_for_label }}">Display name override</label>
+          {{ form.manual_display_name }}
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1" for="{{ form.manual_party.id_for_label }}">Party label override</label>
+          {{ form.manual_party }}
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1" for="{{ form.photo_url.id_for_label }}">Photo URL</label>
+          {{ form.photo_url }}
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1" for="{{ form.manual_photo_url.id_for_label }}">Photo URL override</label>
+          {{ form.manual_photo_url }}
+        </div>
+      </div>
+
+      <div class="surface p-6 space-y-4">
+        <h2 class="text-lg font-semibold">Public contact</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.contact_email.id_for_label }}">Campaign / public email</label>
+            {{ form.contact_email }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.contact_phone.id_for_label }}">Public phone</label>
+            {{ form.contact_phone }}
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-white/60 mb-1" for="{{ form.contact_website.id_for_label }}">Website</label>
+          {{ form.contact_website }}
+        </div>
+      </div>
+
+      <div class="surface p-6 space-y-4">
+        <h2 class="text-lg font-semibold">Reference links</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.link_ballotpedia.id_for_label }}">Ballotpedia</label>
+            {{ form.link_ballotpedia }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.link_wikipedia.id_for_label }}">Wikipedia</label>
+            {{ form.link_wikipedia }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.link_official_site.id_for_label }}">Official site</label>
+            {{ form.link_official_site }}
+          </div>
+        </div>
+      </div>
+
+      <div class="surface p-6 space-y-4">
+        <h2 class="text-lg font-semibold">Social profiles</h2>
+        <p class="text-sm text-white/60">Full profile URLs work best.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.social_x.id_for_label }}">X (Twitter)</label>
+            {{ form.social_x }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.social_facebook.id_for_label }}">Facebook</label>
+            {{ form.social_facebook }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.social_instagram.id_for_label }}">Instagram</label>
+            {{ form.social_instagram }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.social_youtube.id_for_label }}">YouTube channel</label>
+            {{ form.social_youtube }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.social_tiktok.id_for_label }}">TikTok</label>
+            {{ form.social_tiktok }}
+          </div>
+          <div>
+            <label class="block text-xs text-white/60 mb-1" for="{{ form.social_linkedin.id_for_label }}">LinkedIn</label>
+            {{ form.social_linkedin }}
+          </div>
+        </div>
+      </div>
+
+      <div class="surface p-6 space-y-4">
+        <h2 class="text-lg font-semibold">Video interview</h2>
+        <p class="text-sm text-white/60">We only embed YouTube videos after editorial approval. Paste a single watch or youtu.be link.</p>
+        <div>
+          <label class="block text-xs text-white/60 mb-1" for="{{ form.video_interview_url.id_for_label }}">YouTube interview URL</label>
+          {{ form.video_interview_url }}
+          {{ form.video_interview_url.errors }}
+        </div>
+      </div>
+
+      <div class="surface p-6 space-y-4">
+        <h2 class="text-lg font-semibold">Additional notes</h2>
+        {{ form.additional_notes }}
+      </div>
+
+      <div class="flex flex-wrap gap-3 items-center">
+        <button type="submit" class="btn">Submit for review</button>
+        <a class="btn-outline no-underline" href="{% url 'core:home' %}">Cancel</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}

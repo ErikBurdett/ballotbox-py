@@ -57,6 +57,22 @@ def person_detail(request, public_id):
         .order_by("-fetched_at")
         .all()
     )
+    # Best-effort: attach the latest DW endorsement payload (if any) for convenient display.
+    endorsements = []
+    latest_endorsements = (
+        SourceRecord.objects.filter(
+            normalized_content_type=ct,
+            normalized_object_id=person.id,
+            provider="democracy_works",
+            external_id__startswith="candidate_endorsements:",
+        )
+        .order_by("-fetched_at")
+        .first()
+    )
+    if latest_endorsements and isinstance(latest_endorsements.payload, dict):
+        data = latest_endorsements.payload.get("data")
+        if isinstance(data, list):
+            endorsements = data[:25]
 
     canonical_url = request.build_absolute_uri()
 
@@ -72,6 +88,8 @@ def person_detail(request, public_id):
             "phone": phone,
             "website": website,
             "contact_methods": [c for c in person.contact_methods.all() if c.is_public],
+            "endorsements": endorsements,
+            "latest_endorsements_source": latest_endorsements,
             "sources": sources,
             "canonical_url": canonical_url,
         },

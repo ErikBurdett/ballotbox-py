@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVectorField
 from django.db import models
+from urllib.parse import urlparse
 
 from apps.core.models import PublicIdModel, ReviewableModel
 
@@ -76,11 +77,17 @@ class Person(PublicIdModel, ReviewableModel):
         if not u:
             return ""
         # Hide provider placeholders (keeps UI clean; staff can override with manual_photo_url).
-        if ul.endswith(".svg"):
+        try:
+            path = (urlparse(u).path or "").lower()
+        except Exception:
+            path = ""
+        if path.endswith(".svg"):
             return ""
         if "submitphoto" in ul:
             return ""
         if "bp-logo" in ul or "ballotpedia-logo" in ul:
+            return ""
+        if "flag_of_" in ul:
             return ""
         return u
 

@@ -6,11 +6,13 @@ from urllib.parse import urlencode
 from django.core.paginator import Paginator
 from django.db.models import Exists, OuterRef, Q
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET
 from django_ratelimit.decorators import ratelimit
 
 from apps.elections.models import Candidacy, CandidacyStatus, OfficeholderTerm, TermStatus
 from apps.geo.models import DistrictType, Jurisdiction, JurisdictionType
+from apps.ingestion.models import SourceRecord
 from apps.media.models import VideoEmbed
 from apps.offices.models import OfficeBranch, OfficeLevel
 from apps.people.models import ContactMethod, ExternalLink, Party, SocialLink
@@ -18,6 +20,23 @@ from apps.people.models import ContactMethod, ExternalLink, Party, SocialLink
 
 def health(request):
     return JsonResponse({"ok": True})
+
+
+@require_GET
+@ratelimit(key="ip", rate="120/m", block=True)
+def source_record_detail(request, public_id):
+    sr = get_object_or_404(SourceRecord, public_id=public_id)
+    return JsonResponse(
+        {
+            "public_id": str(sr.public_id),
+            "provider": sr.provider,
+            "external_id": sr.external_id,
+            "source_url": sr.source_url,
+            "source_name": sr.source_name,
+            "fetched_at": sr.fetched_at.isoformat() if sr.fetched_at else None,
+            "payload": sr.payload,
+        }
+    )
 
 
 def _truthy(value: str | None) -> bool:

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Terms &amp; Conditions — {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}Terms of use for {{ SITE_NAME }}.{% endblock %}
+
+{% block content %}
+  <div class="container-padded py-10">
+    <article class="surface max-w-3xl mx-auto p-8 text-white/90 text-sm leading-relaxed space-y-6">
+      <h1 class="text-2xl font-bold text-white">Terms &amp; Conditions — {{ SITE_NAME }}</h1>
+      <p class="text-white/60 text-xs">Last revised: {% now "F j, Y" %}</p>
+
+      <p>
+        These Terms apply to your use of the website and online services (&quot;Services&quot;) for {{ SITE_NAME }}. By using the
+        Services, you agree to these Terms.
+      </p>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-semibold text-white">Privacy</h2>
+        <p>See our <a class="text-patriot-blue font-semibold underline" href="{% url 'core:privacy' %}">Privacy Policy</a>.</p>
+      </section>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-semibold text-white">Mobile communications</h2>
+        <p>
+          This site does not currently operate a recurring SMS opt-in. If we add one, terms for mobile programs will be
+          posted here and linked from opt-in checkboxes, consistent with common political / civic texting worksheet
+          guidance (disclosures for message rates, frequency, STOP/HELP, and links to Privacy Policy and these Terms).
+        </p>
+      </section>
+
+      <section class="space-y-2">
+        <h2 class="text-lg font-semibold text-white">Disclaimer</h2>
+        <p>
+          Directory data may contain errors or lag behind official records. THE SERVICES ARE PROVIDED &quot;AS IS.&quot; Verify
+          information through official government sources before relying on it.
+        </p>
+      </section>
+
+      <p>Contact: <a class="text-patriot-blue font-semibold underline" href="mailto:{{ CONTACT_EMAIL }}">{{ CONTACT_EMAIL }}</a></p>
+    </article>
+  </div>
+{% endblock %}
