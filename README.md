@@ -232,6 +232,16 @@ DEMOCRACY_WORKS_ADDRESS_ZIP=13126
 docker compose exec web python manage.py sync_democracy_works
 ```
 
+### Amarillo (Potter + Randall) targeted sync
+
+For a step-by-step guide (including handling `429 Limit Exceeded` vs `403 Forbidden`), see `DW_AMARILLO_SYNC.md`.
+
+To run Amarillo metro sync for 2026:
+
+```bash
+docker compose exec -T web bash -lc "cd /app/src && python manage.py sync_democracy_works --state TX --amarillo-metro --election-year 2026"
+```
+
 After sync:
 
 - `/candidates/` is populated from contests/candidates.

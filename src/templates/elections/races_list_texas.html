@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load querystring %}
+{% load humanize %}
+
+{% block title %}Texas races · {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}Browse every election race we have for Texas, with links to full candidate lists per contest.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+
+{% block content %}
+  <section class="container-padded pt-10 pb-16">
+    <div class="surface p-6">
+      <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+          <p class="text-xs text-white/50 uppercase tracking-wide">
+            <a class="hover:text-white" href="{% url 'elections:candidates_directory' %}">Candidates</a>
+            <span class="text-white/30 mx-2">/</span>
+            Texas races
+          </p>
+          <h1 class="mt-2 text-2xl font-semibold">Races in Texas</h1>
+          <p class="mt-2 text-sm text-white/70">
+            Every contest tied to Texas (state or federal offices in TX). Open a race to see all candidates filed for that ballot line.
+          </p>
+        </div>
+        <div class="text-sm text-white/60 shrink-0">
+          {{ page_obj.paginator.count }} race{{ page_obj.paginator.count|pluralize }}
+        </div>
+      </div>
+
+      <form method="get" class="mt-6 flex flex-col gap-4">
+        <div class="flex flex-col sm:flex-row flex-wrap gap-3">
+          <div class="flex-1 min-w-[12rem]">
+            <label class="block text-xs text-white/60 mb-1" for="q">Search</label>
+            <input id="q" name="q" class="input" value="{{ filters.q }}" placeholder="Office, district, election name…" />
+          </div>
+          <div class="w-full sm:w-40">
+            <label class="block text-xs text-white/60 mb-1" for="election_year">Election year</label>
+            <select id="election_year" name="election_year" class="select">
+              <option value="">All years</option>
+              {% for y in election_years %}
+                <option value="{{ y }}" {% if filters.election_year == y|stringformat:"d" %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="flex items-end gap-2">
+            <button type="submit" class="btn">Apply</button>
+            {% if filters.q or filters.election_year %}
+              <a class="btn-outline no-underline" href="{% url 'elections:races_list_texas' %}">Reset</a>
+            {% endif %}
+          </div>
+        </div>
+        <div class="border-t border-white/10 pt-4">
+          <label class="block text-xs text-white/60 mb-1" for="race-quick">Quick race</label>
+          <select id="race-quick" class="select" autocomplete="off">
+            <option value="">Jump to a race…</option>
+            {% for r in race_quick_pick %}
+              <option value="{% url 'elections:race_detail' r.public_id %}">
+                {{ r.office.name }} · {{ r.election.date }} · {{ r.election.get_election_type_display }}{% if r.district %} · {{ r.district }}{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          <p class="mt-1 text-xs text-white/45">Uses the same search and year filters as the list below (up to 750 races).</p>
+        </div>
+      </form>
+    </div>
+
+    <script>
+      (function () {
+        var el = document.getElementById("race-quick");
+        if (el) {
+          el.addEventListener("change", function () {
+            if (this.value) window.location.href = this.value;
+          });
+        }
+      })();
+    </script>
+
+    <div class="mt-6 space-y-3">
+      {% for race in page_obj %}
+        <a
+          class="surface p-5 block no-underline hover:bg-white/5 transition border-white/10"
+          href="{% url 'elections:race_detail' race.public_id %}"
+        >
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-sm font-semibold text-white">{{ race.office.name }}</div>
+              <div class="mt-1 text-sm text-white/70">
+                <span>{{ race.election.name }}</span>
+                <span class="text-white/40">·</span>
+                <span>{{ race.election.date }}</span>
+                <span class="text-white/40">·</span>
+                <span>{{ race.election.get_election_type_display }}</span>
+              </div>
+              {% if race.district %}
+                <div class="mt-1 text-xs text-white/60">{{ race.district }}</div>
+              {% endif %}
+              {% if race.title %}
+                <div class="mt-2 text-xs text-white/50">{{ race.title }}</div>
+              {% endif %}
+            </div>
+            <div class="shrink-0 flex flex-wrap gap-2 items-center justify-start sm:justify-end">
+              <span class="badge">{{ race.candidate_count }} candidate{{ race.candidate_count|pluralize }}</span>
+              <span class="badge">{{ race.office.jurisdiction.name }}</span>
+              <span class="badge">Updated {{ race.updated_at|naturaltime }}</span>
+            </div>
+          </div>
+        </a>
+      {% empty %}
+        <div class="surface p-8 text-sm text-white/60 text-center">No Texas races match your filters.</div>
+      {% endfor %}
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+      <nav class="mt-8 flex items-center justify-between gap-4 text-sm">
+        <div class="text-white/60">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+        <div class="flex gap-2">
+          {% if page_obj.has_previous %}
+            <a class="btn-outline no-underline" href="{% qs page=page_obj.previous_page_number %}">Previous</a>
+          {% endif %}
+          {% if page_obj.has_next %}
+            <a class="btn-outline no-underline" href="{% qs page=page_obj.next_page_number %}">Next</a>
+          {% endif %}
+        </div>
+      </nav>
+    {% endif %}
+  </section>
+{% endblock %}

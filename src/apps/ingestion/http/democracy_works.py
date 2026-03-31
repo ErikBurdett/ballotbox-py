@@ -22,10 +22,20 @@ class Pagination:
 
 
 class DemocracyWorksClient:
-    def __init__(self, *, api_key: str, base_url: str = "https://api.democracy.works/v2", timeout_s: int = 30):
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        base_url: str = "https://api.democracy.works/v2",
+        timeout_s: int = 30,
+        max_attempts: int = 5,
+        max_backoff_s: float = 60.0,
+    ):
         self.api_key = (api_key or "").strip()
         self.base_url = base_url.rstrip("/")
         self.timeout_s = timeout_s
+        self.max_attempts = max(1, int(max_attempts or 1))
+        self.max_backoff_s = float(max(0.0, float(max_backoff_s or 0.0)))
 
     def _request(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         if not self.api_key:
@@ -45,7 +55,7 @@ class DemocracyWorksClient:
             method="GET",
         )
         last_exc: Exception | None = None
-        for attempt in range(5):
+        for attempt in range(self.max_attempts):
             status: int | None = None
             body = ""
             retry_after_s: float = 0.0
@@ -78,12 +88,16 @@ class DemocracyWorksClient:
 
             # Retry policy (gentle backoff for rate limiting / transient upstream errors).
             if status in {429, 500, 502, 503, 504}:
-                if attempt < 4:
-                    sleep_s = max(retry_after_s, 0.5 * (attempt + 1))
+                if attempt < (self.max_attempts - 1):
+                    # DW does not always return Retry-After headers. When 429 happens, back off harder.
+                    base = 0.5 * (attempt + 1)
+                    if status == 429:
+                        base = 30.0 * (attempt + 1)
+                    sleep_s = max(retry_after_s, min(self.max_backoff_s or base, base))
                     time.sleep(sleep_s)
                     continue
             if status is None and last_exc is not None:
-                if attempt < 4:
+                if attempt < (self.max_attempts - 1):
                     time.sleep(0.5 * (attempt + 1))
                     continue
                 raise DemocracyWorksError(f"DW request failed: {path}") from last_exc
@@ -276,22 +290,52 @@ class DemocracyWorksClient:
     def list_upcoming_elections_for_state(self, *, state_code: str, start_date: date) -> list[dict[str, Any]]:
         return self.list_elections_for_state(state_code=state_code, start_date=start_date, include_ballot_data=True)
 
-    def list_upcoming_elections_for_address(self, *, address: dict[str, str], start_date: date) -> list[dict[str, Any]]:
+    def _address_election_params(
+        self,
+        *,
+        address: dict[str, str],
+        start_date: date,
+        end_date: date | None,
+        include_ballot_data: bool,
+        page_size: int,
+        page: int,
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {
+            "addressStreet": address.get("street") or "",
+            "addressCity": address.get("city") or "",
+            "addressStateCode": address.get("state_code") or "",
+            "addressZip": address.get("zip") or "",
+            "addressZip4": address.get("zip4") or "",
+            "startDate": start_date.isoformat(),
+            "includeBallotData": "true" if include_ballot_data else "false",
+            "pageSize": page_size,
+            "page": page,
+        }
+        if end_date is not None:
+            params["endDate"] = end_date.isoformat()
+        return params
+
+    def list_elections_for_address(
+        self,
+        *,
+        address: dict[str, str],
+        start_date: date,
+        end_date: date | None = None,
+        include_ballot_data: bool = True,
+        page_size: int = 50,
+    ) -> list[dict[str, Any]]:
         elections: list[dict[str, Any]] = []
         page = 1
         while True:
             batch, pagination = self.list_elections(
-                params={
-                    "addressStreet": address.get("street") or "",
-                    "addressCity": address.get("city") or "",
-                    "addressStateCode": address.get("state_code") or "",
-                    "addressZip": address.get("zip") or "",
-                    "addressZip4": address.get("zip4") or "",
-                    "startDate": start_date.isoformat(),
-                    "includeBallotData": "true",
-                    "pageSize": 50,
-                    "page": page,
-                }
+                params=self._address_election_params(
+                    address=address,
+                    start_date=start_date,
+                    end_date=end_date,
+                    include_ballot_data=include_ballot_data,
+                    page_size=page_size,
+                    page=page,
+                )
             )
             elections.extend(batch)
             if not pagination:
@@ -300,4 +344,28 @@ class DemocracyWorksClient:
                 break
             page += 1
         return elections
+
+    def iter_elections_for_address(
+        self,
+        *,
+        address: dict[str, str],
+        start_date: date,
+        end_date: date | None = None,
+        include_ballot_data: bool = True,
+        page_size: int = 50,
+    ):
+        _unused, gen = self.iter_elections(
+            params=self._address_election_params(
+                address=address,
+                start_date=start_date,
+                end_date=end_date,
+                include_ballot_data=include_ballot_data,
+                page_size=page_size,
+                page=1,
+            )
+        )
+        return gen
+
+    def list_upcoming_elections_for_address(self, *, address: dict[str, str], start_date: date) -> list[dict[str, Any]]:
+        return self.list_elections_for_address(address=address, start_date=start_date, end_date=None, include_ballot_data=True)
 

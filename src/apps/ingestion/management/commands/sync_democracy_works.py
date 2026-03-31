@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
+from apps.ingestion.http.democracy_works import DemocracyWorksClient, DemocracyWorksError
 from apps.ingestion.models import Provider
 from apps.ingestion.tasks import sync_provider
 
@@ -42,6 +43,14 @@ class Command(BaseCommand):
             "--all",
             action="store_true",
             help="Full backfill scope for the state (defaults to 2020-01-01 through ~2 years ahead).",
+        )
+        parser.add_argument(
+            "--amarillo-metro",
+            action="store_true",
+            help=(
+                "Fetch ballots for Amarillo, TX using several ZIPs (Potter + Randall coverage). "
+                "Honors --election-year / --start-date / --end-date / --all like state sync."
+            ),
         )
         parser.add_argument(
             "--with-photos",
@@ -122,10 +131,76 @@ class Command(BaseCommand):
         addr["zip"] = ""
         addr["zip4"] = ""
         sync_cfg["address"] = addr
+        # CLI runs do not inherit DEMOCRACY_WORKS_AMARILLO_METRO unless --amarillo-metro is passed.
+        sync_cfg["amarillo_metro"] = bool(options.get("amarillo_metro"))
         settings.DEMOCRACY_WORKS_SYNC = sync_cfg
 
+        # Fail fast with a clear error if the key is invalid or quota is exhausted,
+        # rather than creating stuck SyncRuns.
+        try:
+            client = DemocracyWorksClient(
+                api_key=getattr(settings, "DEMOCRACY_WORKS_API_KEY", ""),
+                base_url=getattr(settings, "DEMOCRACY_WORKS_API_BASE_URL", "https://api.democracy.works/v2"),
+                timeout_s=10,
+                max_attempts=1,
+                max_backoff_s=0.0,
+            )
+            if sync_cfg.get("amarillo_metro"):
+                client.list_elections(
+                    params={
+                        "addressStreet": "601 S Buchanan St",
+                        "addressCity": "Amarillo",
+                        "addressStateCode": "TX",
+                        "addressZip": "79101",
+                        "startDate": sync_cfg.get("start_date") or "",
+                        "endDate": sync_cfg.get("end_date") or "",
+                        "includeBallotData": "false",
+                        "pageSize": 1,
+                        "page": 1,
+                    }
+                )
+            else:
+                client.list_elections(
+                    params={
+                        "stateCode": state,
+                        "startDate": sync_cfg.get("start_date") or "",
+                        "endDate": sync_cfg.get("end_date") or "",
+                        "includeBallotData": "false",
+                        "pageSize": 1,
+                        "page": 1,
+                    }
+                )
+        except DemocracyWorksError as exc:
+            msg = str(exc)
+            if "http 429" in msg.lower() or "limit exceeded" in msg.lower():
+                self.stdout.write(
+                    self.style.ERROR(
+                        "Democracy Works API quota/rate-limit is currently exhausted (HTTP 429 Limit Exceeded). "
+                        "Rotate to a fresh key/quota or wait for the quota window to reset, then re-run this command."
+                    )
+                )
+                return
+            if "http 403" in msg.lower() or "forbidden" in msg.lower():
+                self.stdout.write(
+                    self.style.ERROR(
+                        "Democracy Works API returned HTTP 403 Forbidden. This usually means the API key is invalid/revoked "
+                        "(or missing). Update `DEMOCRACY_WORKS_API_KEY` and re-run."
+                    )
+                )
+                return
+            raise
+
         scope_label = ""
-        if do_all:
+        if sync_cfg.get("amarillo_metro"):
+            if do_all:
+                scope_label = f"Amarillo metro {start_date.isoformat()}..{end_date.isoformat()} (all)"
+            elif start_date or end_date:
+                scope_label = f"Amarillo metro {sync_cfg['start_date'] or '...'}..{sync_cfg['end_date'] or '...'}"
+            elif election_year:
+                scope_label = f"Amarillo metro year={election_year}"
+            else:
+                scope_label = "Amarillo metro (default dates: current election year)"
+        elif do_all:
             scope_label = f"{state} {start_date.isoformat()}..{end_date.isoformat()} (all)"
         elif start_date or end_date:
             scope_label = f"{state} {sync_cfg['start_date'] or '...'}..{sync_cfg['end_date'] or '...'}"

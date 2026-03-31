@@ -1,9 +1,15 @@
 from django.utils import timezone
 
+from apps.ingestion.adapters.democracy_works import _dw_election_dedupe_key
 from apps.ingestion.models import Provider, SyncRun, SyncStatus
-from apps.ingestion.normalizers.democracy_works import normalize_dw_contest, normalize_dw_election
+from apps.ingestion.normalizers.democracy_works import normalize_dw_election
 from apps.elections.models import Candidacy, Election, Race
 from apps.people.models import ContactMethod, ExternalLink, Person
+
+
+def test_dw_election_dedupe_key_prefers_id():
+    assert _dw_election_dedupe_key({"id": "e1", "ocdId": "x", "date": "2026-01-01"}) == "id:e1"
+    assert _dw_election_dedupe_key({"ocdId": "ocd/a", "date": "2026-03-01"}) == "ocd:ocd/a:2026-03-01"
 
 
 def test_dw_normalization_creates_election_contest_candidate(db):

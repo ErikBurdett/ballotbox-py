@@ -49,6 +49,7 @@ class Command(BaseCommand):
         # Override sync scope for this run without requiring a restart.
         sync_cfg = getattr(settings, "DEMOCRACY_WORKS_SYNC", {}) or {}
         sync_cfg["state_code"] = state
+        sync_cfg["amarillo_metro"] = False
         addr = (sync_cfg.get("address") or {}) if isinstance(sync_cfg, dict) else {}
         if isinstance(addr, dict):
             addr["street"] = ""

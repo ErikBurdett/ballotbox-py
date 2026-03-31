@@ -31,6 +31,7 @@ env = environ.Env(
     DEMOCRACY_WORKS_ELECTION_YEAR=(str, ""),
     DEMOCRACY_WORKS_START_DATE=(str, ""),
     DEMOCRACY_WORKS_END_DATE=(str, ""),
+    DEMOCRACY_WORKS_AMARILLO_METRO=(bool, False),
 )
 
 environ.Env.read_env(BASE_DIR.parent / ".env")
@@ -182,6 +183,7 @@ DEMOCRACY_WORKS_SYNC = {
     "election_year": (env("DEMOCRACY_WORKS_ELECTION_YEAR") or "").strip(),
     "start_date": (env("DEMOCRACY_WORKS_START_DATE") or "").strip(),
     "end_date": (env("DEMOCRACY_WORKS_END_DATE") or "").strip(),
+    "amarillo_metro": env("DEMOCRACY_WORKS_AMARILLO_METRO"),
     "address": {
         "street": env("DEMOCRACY_WORKS_ADDRESS_STREET") or "",
         "city": env("DEMOCRACY_WORKS_ADDRESS_CITY") or "",

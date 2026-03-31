@@ -4,15 +4,39 @@ from datetime import date
 
 from django.conf import settings
 from django.core.paginator import Paginator
-from django.db.models import Exists, Max, Min, OuterRef, Q, Subquery
-from django.shortcuts import render
+from django.db.models import Count, Exists, Max, Min, OuterRef, Q, Subquery
+from django.db.models.functions import ExtractYear
+from django.http import Http404
+from django.shortcuts import get_object_or_404, render
 
 from apps.geo.models import DistrictType, Jurisdiction, JurisdictionType
 from apps.media.models import VideoEmbed
 from apps.offices.models import OfficeBranch, OfficeLevel
 from apps.people.models import ContactMethod, ExternalLink, Party, Person, SocialLink
 
-from .models import Candidacy, CandidacyStatus
+from .models import Candidacy, CandidacyStatus, Race
+
+TEXAS_RACES_STATE = "TX"
+
+
+def _texas_races_filter() -> Q:
+    """Races tied to Texas via the election jurisdiction and/or the office jurisdiction."""
+    return Q(election__jurisdiction__state=TEXAS_RACES_STATE) | Q(office__jurisdiction__state=TEXAS_RACES_STATE)
+
+
+def _race_is_in_texas(race: Race) -> bool:
+    return (
+        race.election.jurisdiction.state == TEXAS_RACES_STATE
+        or race.office.jurisdiction.state == TEXAS_RACES_STATE
+    )
+
+
+def _primary_candidacy_for_directory_card(cands: list) -> list:
+    """At most one candidacy for the card body: the row with the latest ``updated_at`` (ties broken by pk)."""
+    if not cands:
+        return []
+    best = max(cands, key=lambda c: (c.updated_at, c.pk))
+    return [best]
 
 
 def _truthy(value: str | None) -> bool:
@@ -274,13 +298,15 @@ def candidates_directory(request):
     directory_rows = []
     for row in page_obj.object_list:
         pid = row["person_id"]
-        clist = by_person.get(pid) or []
+        raw = by_person.get(pid) or []
+        has_video = any(getattr(c, "has_video", False) for c in raw)
+        clist = _primary_candidacy_for_directory_card(raw)
         person = clist[0].person if clist else Person.objects.get(pk=pid)
         directory_rows.append(
             {
                 "person": person,
                 "candidacies": clist,
-                "has_video": any(getattr(c, "has_video", False) for c in clist),
+                "has_video": has_video,
             }
         )
 
@@ -322,4 +348,91 @@ def candidates_directory(request):
         return render(request, "elections/partials/_candidates_results.html", context)
 
     return render(request, "elections/candidates_directory.html", context)
+
+
+def races_list_texas(request):
+    """All races in Texas (office or election jurisdiction in TX)."""
+    races_base = Race.objects.filter(_texas_races_filter()).select_related(
+        "election",
+        "election__jurisdiction",
+        "office",
+        "office__jurisdiction",
+        "district",
+    )
+
+    election_year = (request.GET.get("election_year") or "").strip()
+    if election_year.isdigit():
+        races_base = races_base.filter(election__date__year=int(election_year))
+
+    q = (request.GET.get("q") or "").strip()
+    if q:
+        races_base = races_base.filter(
+            Q(office__name__icontains=q)
+            | Q(election__name__icontains=q)
+            | Q(title__icontains=q)
+            | Q(district__name__icontains=q)
+            | Q(district__number__icontains=q)
+        )
+
+    # Dropdown: same filters as the list, capped for browser performance.
+    race_quick_pick = list(races_base.order_by("-election__date", "office__name", "id")[:750])
+
+    races = races_base.annotate(candidate_count=Count("candidacies", distinct=True)).order_by(
+        "-election__date", "office__name", "id"
+    )
+
+    paginator = Paginator(races, 40)
+    page_obj = paginator.get_page(request.GET.get("page") or 1)
+
+    election_years = (
+        Race.objects.filter(_texas_races_filter())
+        .annotate(_yr=ExtractYear("election__date"))
+        .values_list("_yr", flat=True)
+        .distinct()
+        .order_by("-_yr")
+    )
+
+    return render(
+        request,
+        "elections/races_list_texas.html",
+        {
+            "page_obj": page_obj,
+            "canonical_url": request.build_absolute_uri(),
+            "state_code": TEXAS_RACES_STATE,
+            "filters": {"election_year": election_year, "q": q},
+            "election_years": list(election_years),
+            "race_quick_pick": race_quick_pick,
+        },
+    )
+
+
+def race_detail(request, public_id):
+    race = get_object_or_404(
+        Race.objects.select_related(
+            "election",
+            "election__jurisdiction",
+            "office",
+            "office__jurisdiction",
+            "district",
+        ),
+        public_id=public_id,
+    )
+    if not _race_is_in_texas(race):
+        raise Http404()
+
+    candidacies = (
+        Candidacy.objects.filter(race=race)
+        .select_related("person")
+        .order_by("person__last_name", "person__first_name", "id")
+    )
+
+    return render(
+        request,
+        "elections/race_detail.html",
+        {
+            "race": race,
+            "candidacies": candidacies,
+            "canonical_url": request.build_absolute_uri(),
+        },
+    )
 

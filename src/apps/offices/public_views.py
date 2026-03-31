@@ -13,6 +13,25 @@ from apps.people.models import ContactMethod, ExternalLink, Party, Person, Socia
 from .models import OfficeBranch, OfficeLevel
 
 
+def _dedupe_terms_for_directory(terms: list) -> list:
+    """Collapse duplicate term rows for the same office + jurisdiction + district + status.
+
+    Sync can create multiple ``OfficeholderTerm`` rows that read the same on the card; each has its own
+    ``updated_at``. Keep the term with the latest ``updated_at`` per key.
+    """
+    if len(terms) < 2:
+        return terms
+    best: dict[tuple, OfficeholderTerm] = {}
+    for t in sorted(terms, key=lambda x: x.updated_at, reverse=True):
+        key = (t.office_id, t.office.jurisdiction_id, t.district_id, t.status)
+        if key not in best:
+            best[key] = t
+    return sorted(
+        best.values(),
+        key=lambda x: (-x.updated_at.timestamp(), x.office.name.lower(), x.id),
+    )
+
+
 def _truthy(value: str | None) -> bool:
     return (value or "").strip().lower() in {"1", "true", "t", "yes", "y", "on"}
 
@@ -219,13 +238,15 @@ def officials_directory(request):
     directory_rows = []
     for row in page_obj.object_list:
         pid = row["person_id"]
-        tlist = by_person.get(pid) or []
+        raw = by_person.get(pid) or []
+        has_video = any(getattr(t, "has_video", False) for t in raw)
+        tlist = _dedupe_terms_for_directory(raw)
         person = tlist[0].person if tlist else Person.objects.get(pk=pid)
         directory_rows.append(
             {
                 "person": person,
                 "terms": tlist,
-                "has_video": any(getattr(t, "has_video", False) for t in tlist),
+                "has_video": has_video,
             }
         )
 

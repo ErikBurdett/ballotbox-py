@@ -71,8 +71,9 @@ def sync_provider(provider: str) -> str:
             if provider_value == Provider.DEMOCRACY_WORKS and not payloads:
                 run.status = SyncStatus.FAILED
                 run.error_text = (
-                    "No DW sync scope configured. Set either DEMOCRACY_WORKS_STATE_CODE "
-                    "or full DEMOCRACY_WORKS_ADDRESS_* values in your environment."
+                    "No DW sync scope configured. Set DEMOCRACY_WORKS_STATE_CODE, "
+                    "full DEMOCRACY_WORKS_ADDRESS_* values, or DEMOCRACY_WORKS_AMARILLO_METRO=true "
+                    "(or run manage.py sync_democracy_works --amarillo-metro)."
                 )
                 run.stats = {"fetched": 0, "errors": 0}
                 return run.public_id.hex
@@ -80,24 +81,33 @@ def sync_provider(provider: str) -> str:
             run.stats = {"fetched": len(payloads)}
             run.save(update_fields=["stats", "updated_at"])
 
-        for payload in payload_iter or []:
-            fetched += 1
-            try:
-                adapter.normalize(payload, sync_run=run)
-            except Exception as exc:
-                errors += 1
-                logger.exception("normalize failed provider=%s", provider_value)
-                run.error_text = (run.error_text + "\n" if run.error_text else "") + str(exc)
-            if fetched and fetched % 25 == 0:
-                run.stats = {**(run.stats or {}), "fetched": fetched, "errors": errors}
-                run.save(update_fields=["stats", "updated_at"])
+        try:
+            for payload in payload_iter or []:
+                fetched += 1
+                try:
+                    adapter.normalize(payload, sync_run=run)
+                except Exception as exc:
+                    errors += 1
+                    logger.exception("normalize failed provider=%s", provider_value)
+                    run.error_text = (run.error_text + "\n" if run.error_text else "") + str(exc)
+                if fetched and fetched % 25 == 0:
+                    run.stats = {**(run.stats or {}), "fetched": fetched, "errors": errors}
+                    run.save(update_fields=["stats", "updated_at"])
+        except Exception as exc:
+            # Catch fetch/iteration exceptions (e.g. upstream HTTP 429) so the SyncRun is not left RUNNING forever.
+            errors += 1
+            logger.exception("fetch/iterate failed provider=%s", provider_value)
+            run.status = SyncStatus.FAILED
+            run.error_text = (run.error_text + "\n" if run.error_text else "") + f"Fetch failed: {exc}"
+            run.stats = {**(run.stats or {}), "fetched": fetched, "errors": errors}
+            return run.public_id.hex
 
         if provider_value == Provider.DEMOCRACY_WORKS and fetched == 0:
             run.status = SyncStatus.FAILED
             run.error_text = (
                 "No Democracy Works elections were returned for the configured scope. "
-                "Check DEMOCRACY_WORKS_STATE_CODE / address settings and (optionally) "
-                "DEMOCRACY_WORKS_START_DATE / DEMOCRACY_WORKS_END_DATE."
+                "Check DEMOCRACY_WORKS_STATE_CODE, address settings, Amarillo metro mode, "
+                "and (optionally) DEMOCRACY_WORKS_START_DATE / DEMOCRACY_WORKS_END_DATE."
             )
             run.stats = {"fetched": 0, "errors": 0}
             return run.public_id.hex
@@ -115,6 +125,9 @@ def sync_provider(provider: str) -> str:
 def sync_all_providers() -> list[str]:
     results: list[str] = []
     for provider, _label in Provider.choices:
+        # Democracy Works is expensive and quota-limited; run it explicitly via management commands.
+        if provider == Provider.DEMOCRACY_WORKS:
+            continue
         results.append(sync_provider(provider))
     return results
 

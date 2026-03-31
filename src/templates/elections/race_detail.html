@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{{ race.office.name }} · {{ race.election.date }} · {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}Candidates for {{ race.office.name }} on {{ race.election.date }} in {{ race.office.jurisdiction.name }}.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+
+{% block content %}
+  <section class="container-padded pt-10 pb-16">
+    <div class="max-w-4xl">
+      <p class="text-xs text-white/50 uppercase tracking-wide">
+        <a class="hover:text-white" href="{% url 'elections:races_list_texas' %}">Texas races</a>
+        <span class="text-white/30 mx-2">/</span>
+        <span class="text-white/70">Contest</span>
+      </p>
+
+      <div class="mt-4 surface p-6 sm:p-8">
+        <h1 class="text-2xl sm:text-3xl font-semibold leading-tight">{{ race.office.name }}</h1>
+        <div class="mt-3 flex flex-wrap gap-2 text-sm text-white/70">
+          <span class="badge">{{ race.election.name }}</span>
+          <span class="badge">{{ race.election.date }}</span>
+          <span class="badge">{{ race.election.get_election_type_display }}</span>
+          <span class="badge">{{ race.office.get_level_display }} · {{ race.office.get_branch_display }}</span>
+          <span class="badge">{{ race.office.jurisdiction.name }}</span>
+        </div>
+        {% if race.district %}
+          <div class="mt-3 text-sm text-white/80">{{ race.district }}</div>
+        {% endif %}
+        {% if race.title or race.about_office %}
+          <div class="mt-4 text-sm text-white/60 space-y-2">
+            {% if race.title %}<p class="font-medium text-white/80">{{ race.title }}</p>{% endif %}
+            {% if race.about_office %}<p>{{ race.about_office }}</p>{% endif %}
+          </div>
+        {% endif %}
+        <div class="mt-4 text-xs text-white/50">
+          Directory updated {{ race.updated_at|naturaltime }}
+          {% if race.seats_up_for_election %} · Seats: {{ race.seats_up_for_election }}{% endif %}
+          {% if race.ranked_choice %} · Ranked choice{% endif %}
+        </div>
+      </div>
+
+      <div class="mt-8">
+        <h2 class="text-lg font-semibold">Candidates ({{ candidacies|length }})</h2>
+        <p class="mt-1 text-sm text-white/60">Each name links to the full public profile for that person.</p>
+
+        {% if candidacies %}
+          <div class="mt-5 space-y-3">
+            {% for c in candidacies %}
+              <a
+                class="surface p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-underline hover:bg-white/5 border-white/10 transition"
+                href="{% url 'people:person_detail' c.person.public_id %}"
+              >
+                <div class="min-w-0 flex gap-4">
+                  <div class="h-14 w-14 rounded-xl bg-white/10 overflow-hidden shrink-0 flex items-center justify-center text-lg font-semibold text-white/70">
+                    {% if c.person.display_photo_url %}
+                      <img class="h-full w-full object-cover" src="{{ c.person.display_photo_url }}" alt="Headshot of {{ c.person.display_name }}" loading="lazy">
+                    {% else %}
+                      {{ c.person.display_name|slice:":1" }}
+                    {% endif %}
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-base font-semibold text-white truncate">{{ c.person.display_name }}</div>
+                    <div class="mt-1 flex flex-wrap gap-2 text-xs text-white/60">
+                      <span>Status: {{ c.get_status_display }}</span>
+                      {% if c.is_incumbent %}<span>· Incumbent</span>{% endif %}
+                      {% if c.is_challenger %}<span>· Challenger</span>{% endif %}
+                      {% if c.is_write_in %}<span>· Write-in</span>{% endif %}
+                      {% if c.endorsement_count %}<span>· Endorsements: {{ c.endorsement_count }}</span>{% endif %}
+                    </div>
+                  </div>
+                </div>
+                <div class="shrink-0">
+                  <span class="badge">{{ c.display_party }}</span>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="mt-5 surface p-6 text-sm text-white/60">No candidates are listed for this race yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+{% endblock %}
