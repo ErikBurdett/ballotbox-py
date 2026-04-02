@@ -1,0 +1,38 @@
+{% extends "admin/index.html" %}
+{% block content %}
+{{ block.super }}
+<div class="module">
+  <table>
+    <caption>
+      <a href="#" class="section">Download data (CSV)</a>
+    </caption>
+    <tbody>
+      <tr>
+        <th scope="row">Officials</th>
+        <td><a href="{% url 'admin_data_export' 'officials' %}">officeholder_terms.csv</a></td>
+      </tr>
+      <tr>
+        <th scope="row">Candidates</th>
+        <td><a href="{% url 'admin_data_export' 'candidates' %}">candidacies.csv</a></td>
+      </tr>
+      <tr>
+        <th scope="row">Persons</th>
+        <td><a href="{% url 'admin_data_export' 'persons' %}">persons.csv</a></td>
+      </tr>
+      <tr>
+        <th scope="row">Races</th>
+        <td><a href="{% url 'admin_data_export' 'races' %}">races.csv</a></td>
+      </tr>
+      <tr>
+        <th scope="row">All emails</th>
+        <td>
+          <a href="{% url 'admin_data_export' 'emails' %}">all-emails.csv</a>
+          — person contact emails (with official/candidate flags and related jurisdictions) plus profile submission
+          submitter and contact emails. Jurisdiction rows in the catalog do not have email fields; submission rows include
+          <code>jurisdiction_name</code> when the submitter supplied it.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}
