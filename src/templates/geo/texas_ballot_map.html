@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Texas ballot map · {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}Click Texas or search an address to see offices, races, and officials we already have on file for that county.{% endblock %}
+
+{% block content %}
+  <section class="container-padded pt-10 pb-16">
+    <div class="surface p-6">
+      <h1 class="text-2xl font-semibold">Texas ballot map</h1>
+      <p class="mt-2 text-sm text-white/70 max-w-3xl">
+        County boundaries are shown for reference. Click anywhere in Texas to load offices, elections, races, and current officials
+        from the database for the county that contains that point. Address search uses the free
+        <a class="text-white underline decoration-white/30" href="https://geocoding.geo.census.gov/">U.S. Census geocoder</a>
+        (no Ballotpedia calls).
+      </p>
+    </div>
+
+    <div class="mt-6 grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <div class="xl:col-span-7 space-y-4">
+        <div class="surface p-4">
+          <form id="ballot-geocode-form" class="flex flex-col sm:flex-row gap-2 sm:items-end" action="#" onsubmit="return false;">
+            <div class="flex-1 min-w-0">
+              <label for="ballot-address" class="block text-xs font-semibold text-white/70 mb-1">Search address (Texas)</label>
+              <input id="ballot-address" class="input" type="text" placeholder="Street, city, TX ZIP" autocomplete="street-address" />
+            </div>
+            <button type="submit" class="btn shrink-0">Go</button>
+          </form>
+          <p id="ballot-geocode-msg" class="mt-2 text-xs text-white/50 hidden"></p>
+        </div>
+        <div
+          id="ballot-map"
+          class="surface overflow-hidden border border-white/10"
+          style="height: 520px; min-height: 320px;"
+          data-context-url="{% url 'geo:texas_ballot_map_context' %}"
+          data-geocode-url="{% url 'geo:texas_ballot_map_geocode' %}"
+          data-geojson-url="{{ tx_counties_geojson_url }}"
+        ></div>
+        <p class="text-xs text-white/50">MapLibre + county lines from local GeoJSON. Basemap: MapLibre demo tiles.</p>
+      </div>
+      <div class="xl:col-span-5 min-h-[200px]">
+        <h2 class="text-lg font-semibold mb-3">For this location</h2>
+        <div id="ballot-map-context" class="min-h-[120px]">
+          <div class="surface p-4 text-sm text-white/60">Click the map or search an address to see county-level data.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" crossorigin="anonymous" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin="anonymous"></script>
+  <script>
+    (function () {
+      var el = document.getElementById("ballot-map");
+      if (!el || typeof maplibregl === "undefined") return;
+
+      var contextUrl = el.dataset.contextUrl;
+      var geocodeUrl = el.dataset.geocodeUrl;
+      var geojsonUrl = el.dataset.geojsonUrl;
+
+      var map = new maplibregl.Map({
+        container: "ballot-map",
+        style: "https://demotiles.maplibre.org/style.json",
+        bounds: [
+          [-106.65, 25.84],
+          [-93.51, 36.5],
+        ],
+        fitBoundsOptions: { padding: 24 },
+      });
+      map.addControl(new maplibregl.NavigationControl(), "top-right");
+
+      var marker = null;
+      function loadContext(lat, lng) {
+        var url = contextUrl + "?lat=" + encodeURIComponent(lat) + "&lng=" + encodeURIComponent(lng);
+        fetch(url)
+          .then(function (r) {
+            return r.text();
+          })
+          .then(function (html) {
+            document.getElementById("ballot-map-context").innerHTML = html;
+          });
+        if (marker) marker.remove();
+        marker = new maplibregl.Marker({ color: "#E11D48" }).setLngLat([lng, lat]).addTo(map);
+      }
+
+      map.on("load", function () {
+        map.addSource("tx-counties", {
+          type: "geojson",
+          data: geojsonUrl,
+        });
+        map.addLayer({
+          id: "tx-counties-fill",
+          type: "fill",
+          source: "tx-counties",
+          paint: { "fill-color": "#2563EB", "fill-opacity": 0.06 },
+        });
+        map.addLayer({
+          id: "tx-counties-line",
+          type: "line",
+          source: "tx-counties",
+          paint: { "line-color": "rgba(255,255,255,0.35)", "line-width": 0.8 },
+        });
+
+        map.on("click", function (e) {
+          var lng = e.lngLat.lng;
+          var lat = e.lngLat.lat;
+          loadContext(lat, lng);
+        });
+        map.getCanvas().style.cursor = "crosshair";
+      });
+
+      document.getElementById("ballot-geocode-form").addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var input = document.getElementById("ballot-address");
+        var msg = document.getElementById("ballot-geocode-msg");
+        var q = (input.value || "").trim();
+        if (!q) return;
+        msg.classList.remove("hidden");
+        msg.textContent = "Searching…";
+        fetch(geocodeUrl + "?q=" + encodeURIComponent(q))
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (data) {
+            if (!data.ok) {
+              msg.textContent = data.error || "No results.";
+              return;
+            }
+            msg.textContent = data.display || "Located.";
+            map.flyTo({ center: [data.lng, data.lat], zoom: 11 });
+            loadContext(data.lat, data.lng);
+          })
+          .catch(function () {
+            msg.textContent = "Geocoder failed.";
+          });
+      });
+    })();
+  </script>
+{% endblock %}

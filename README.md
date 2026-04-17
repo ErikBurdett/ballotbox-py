@@ -62,15 +62,17 @@ Load **demo fixtures** into normalized tables + audit `SourceRecord` rows:
 docker compose exec web python manage.py sync_demo
 ```
 
-Note: `sync_demo` runs **local fixtures only**. Democracy Works is synced separately via `sync_democracy_works`.
+Note: `sync_demo` runs **local fixtures only**. New election data is synced via **Ballotpedia geographic** (`sync_ballotpedia_geographic`) when `BALLOTPEDIA_API_KEY` is set; Democracy Works is optional legacy (`sync_democracy_works` or `seed_data --with-dw`).
 
-### Seed everything (fixtures + Democracy Works Texas)
+### Seed everything (fixtures + Ballotpedia geographic)
 
-If you have `DEMOCRACY_WORKS_API_KEY` configured, this command seeds demo fixtures and then syncs Democracy Works for **Texas** by default:
+With `BALLOTPEDIA_API_KEY` set, `seed_data` loads demo fixtures (except Ballotpedia demo rows, which are skipped when the API key is present) and runs a **quota-friendly** Potter/Randall geographic sync:
 
 ```bash
-docker compose exec web python manage.py seed_data --dw-state TX
+docker compose exec web bash -lc "cd /app/src && python manage.py seed_data"
 ```
+
+Optional legacy Democracy Works (requires `DEMOCRACY_WORKS_API_KEY`): `python manage.py seed_data --with-dw --dw-state TX`
 
 Then open:
 

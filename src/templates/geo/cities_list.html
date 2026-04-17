@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Cities &amp; towns · {{ state }} · {{ SITE_NAME }}{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+
+{% block content %}
+  <section class="container-padded pt-10">
+    <div class="surface p-6">
+      <h1 class="text-2xl font-semibold">{{ state }} cities &amp; towns</h1>
+      <p class="mt-2 text-sm text-white/70">Municipal jurisdictions we have on file (city, town, village, borough, township), with the same hub layout as counties: offices, officials, elections, and races.</p>
+    </div>
+
+    <div class="mt-6 surface p-6">
+      {% if cities %}
+        <ul class="columns-1 sm:columns-2 lg:columns-3 gap-x-8 space-y-2 text-sm">
+          {% for j in cities %}
+            <li class="break-inside-avoid">
+              <a class="no-underline text-white/90 hover:text-white" href="{% url 'geo:city_detail' j.state j.url_slug %}">{{ j.name }}</a>
+              <span class="text-white/50 text-xs"> · {{ j.get_jurisdiction_type_display }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-sm text-white/60">No municipal jurisdictions in the database for {{ state }} yet.</p>
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}

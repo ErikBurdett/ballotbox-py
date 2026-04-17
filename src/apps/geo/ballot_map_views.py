@@ -1,0 +1,161 @@
+from __future__ import annotations
+
+import json
+import urllib.error
+import urllib.parse
+import urllib.request
+
+from django.http import HttpResponseBadRequest, JsonResponse
+from django.shortcuts import render
+from django.templatetags.static import static
+from django.views.decorators.http import require_GET
+
+from apps.geo.public_views import _jurisdiction_hub_context
+from apps.geo.texas_county_boundaries import resolve_jurisdiction_for_texas_county_feature, texas_county_feature_for_point
+
+# Approximate Texas bounds (WGS84) for soft validation
+_TX_LON = (-106.65, -93.51)
+_TX_LAT = (25.84, 36.50)
+
+
+def _parse_lon_lat(request) -> tuple[float, float] | None:
+    try:
+        lon = float(request.GET.get("lng") or request.GET.get("lon") or "")
+        lat = float(request.GET.get("lat") or "")
+    except (TypeError, ValueError):
+        return None
+    if not (-180.0 <= lon <= 180.0 and -90.0 <= lat <= 90.0):
+        return None
+    return lon, lat
+
+
+def _in_texas_bbox(lon: float, lat: float) -> bool:
+    return _TX_LON[0] <= lon <= _TX_LON[1] and _TX_LAT[0] <= lat <= _TX_LAT[1]
+
+
+@require_GET
+def texas_ballot_map(request):
+    return render(
+        request,
+        "geo/texas_ballot_map.html",
+        {
+            "tx_counties_geojson_url": static("geo/tx-counties.geojson"),
+        },
+    )
+
+
+@require_GET
+def texas_ballot_map_context(request):
+    parsed = _parse_lon_lat(request)
+    if parsed is None:
+        return render(
+            request,
+            "geo/texas_ballot_map_context.html",
+            {
+                "error": "Select a location on the map (or search for a Texas address).",
+                "county_label": "",
+                "jurisdiction": None,
+                "offices": [],
+                "current_terms": [],
+                "elections": [],
+                "races": [],
+                "sources": [],
+                "canonical_url": "",
+            },
+        )
+    lon, lat = parsed
+    feature = texas_county_feature_for_point(lon, lat)
+    if feature is None:
+        msg = (
+            "No Texas county boundary contains this point."
+            if _in_texas_bbox(lon, lat)
+            else "This point appears to be outside Texas. Try a location inside the state."
+        )
+        return render(
+            request,
+            "geo/texas_ballot_map_context.html",
+            {
+                "error": msg,
+                "county_label": "",
+                "jurisdiction": None,
+                "offices": [],
+                "current_terms": [],
+                "elections": [],
+                "races": [],
+                "sources": [],
+                "canonical_url": "",
+            },
+        )
+
+    props = feature.get("properties") or {}
+    county_label = str(props.get("NAME") or "").strip()
+    if (props.get("LSAD") or "").strip().lower() == "county" and county_label and "county" not in county_label.lower():
+        county_display = f"{county_label} County"
+    else:
+        county_display = county_label or "Unknown county"
+
+    jurisdiction = resolve_jurisdiction_for_texas_county_feature(feature)
+    if jurisdiction is None:
+        return render(
+            request,
+            "geo/texas_ballot_map_context.html",
+            {
+                "error": (
+                    f"We matched {county_display} on the map, but there is no matching "
+                    "county jurisdiction in the database yet. Run ingestion when data is available."
+                ),
+                "county_label": county_display,
+                "jurisdiction": None,
+                "offices": [],
+                "current_terms": [],
+                "elections": [],
+                "races": [],
+                "sources": [],
+                "canonical_url": "",
+            },
+        )
+
+    ctx = _jurisdiction_hub_context(request, jurisdiction)
+    ctx["county_label"] = county_display
+    ctx["geo_match_note"] = f"Showing data for {county_display} (point: {lat:.4f}, {lon:.4f})."
+    ctx["error"] = ""
+    return render(request, "geo/texas_ballot_map_context.html", ctx)
+
+
+@require_GET
+def texas_ballot_map_geocode(request):
+    """
+    Proxy to the U.S. Census geocoder (no API key). Returns JSON ``lat``, ``lng``, ``display``.
+    """
+    q = (request.GET.get("q") or request.GET.get("address") or "").strip()
+    if not q or len(q) > 240:
+        return HttpResponseBadRequest("Missing or invalid address")
+
+    params = urllib.parse.urlencode(
+        {
+            "address": q,
+            "benchmark": "Public_AR_Current",
+            "format": "json",
+        }
+    )
+    url = f"https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?{params}"
+    try:
+        with urllib.request.urlopen(url, timeout=20) as resp:
+            payload = json.loads(resp.read().decode("utf-8", "ignore"))
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError, ValueError):
+        return JsonResponse({"ok": False, "error": "Geocoder request failed. Try again or click the map."}, status=502)
+
+    matches = (payload.get("result") or {}).get("addressMatches") or []
+    if not matches:
+        return JsonResponse({"ok": False, "error": "No match found. Include street, city, and ZIP if possible."})
+
+    m0 = matches[0]
+    coords = m0.get("coordinates") or {}
+    try:
+        lng = float(coords["x"])
+        lat = float(coords["y"])
+    except (KeyError, TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "Unexpected geocoder response."}, status=502)
+
+    matched = m0.get("matchedAddress") or q
+    return JsonResponse({"ok": True, "lat": lat, "lng": lng, "display": matched})

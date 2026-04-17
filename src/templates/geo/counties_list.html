@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Counties · {{ state }} · {{ SITE_NAME }}{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+
+{% block content %}
+  <section class="container-padded pt-10">
+    <div class="surface p-6">
+      <h1 class="text-2xl font-semibold">{{ state }} counties</h1>
+      <p class="mt-2 text-sm text-white/70">Open a county hub for offices, current officials, elections, and races with candidates we have ingested for that jurisdiction.</p>
+    </div>
+
+    <div class="mt-6 surface p-6">
+      {% if counties %}
+        <ul class="columns-1 sm:columns-2 lg:columns-3 gap-x-8 space-y-2 text-sm">
+          {% for j in counties %}
+            <li class="break-inside-avoid">
+              <a class="no-underline text-white/90 hover:text-white" href="{% url 'geo:county_detail' j.state j.url_slug %}">{{ j.name }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-sm text-white/60">No county jurisdictions in the database for {{ state }} yet. After syncing Ballotpedia geography, county rows should appear here.</p>
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}

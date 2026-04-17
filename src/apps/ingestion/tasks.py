@@ -38,6 +38,19 @@ def sync_provider(provider: str) -> str:
     run = SyncRun.objects.create(provider=provider_value, status=SyncStatus.RUNNING)
 
     try:
+        from django.conf import settings as django_settings
+
+        if provider_value == Provider.DEMOCRACY_WORKS and not (
+            getattr(django_settings, "DEMOCRACY_WORKS_API_KEY", "") or ""
+        ).strip():
+            run.status = SyncStatus.SUCCESS
+            run.stats = {"fetched": 0, "skipped": True}
+            run.error_text = (
+                "Skipped: DEMOCRACY_WORKS_API_KEY is not set. Existing Democracy Works data is unchanged; "
+                "use Ballotpedia geographic sync for new election data."
+            )
+            return run.public_id.hex
+
         adapters = [a for a in get_adapters() if a.provider == provider_value]
         if not adapters:
             run.status = SyncStatus.FAILED
@@ -156,6 +169,10 @@ def sync_ballotpedia_photos_batch(
             state = str((getattr(settings, "DEMOCRACY_WORKS_SYNC", {}) or {}).get("state_code") or "").strip().upper()
         except Exception:
             state = ""
+        if not state:
+            state = str(getattr(settings, "BALLOTPEDIA_SYNC_STATE_CODE", "") or "").strip().upper()
+        if not state:
+            state = "TX"
         call_command(
             "sync_ballotpedia_photos",
             limit=limit,
@@ -165,6 +182,36 @@ def sync_ballotpedia_photos_batch(
             with_contact=with_contact,
             only_missing_contact=only_missing_contact,
         )
+        return "ok"
+    finally:
+        cache.delete(lock_key)
+
+
+@shared_task
+def sync_ballotpedia_geographic_scheduled() -> str:
+    """
+    Scheduled Ballotpedia Data Client geographic sync (Potter + Randall by default).
+
+    Quota-friendly defaults come from Django settings (BALLOTPEDIA_GEO_*).
+    """
+    from django.conf import settings
+
+    if not (getattr(settings, "BALLOTPEDIA_API_KEY", "") or "").strip():
+        return "skipped_no_ballotpedia_api_key"
+    lock_key = _lock_key("ballotpedia_geographic")
+    if not cache.add(lock_key, "1", timeout=60 * 60):
+        return "locked"
+    try:
+        kwargs: dict = {
+            "max_requests": int(getattr(settings, "BALLOTPEDIA_GEO_MAX_REQUESTS", 160)),
+            "max_election_dates": int(getattr(settings, "BALLOTPEDIA_GEO_MAX_ELECTION_DATES", 14)),
+            "max_tx_calendar_pages": int(getattr(settings, "BALLOTPEDIA_GEO_MAX_TX_CALENDAR_PAGES", 10)),
+            "tx_local_state_pages": int(getattr(settings, "BALLOTPEDIA_GEO_TX_LOCAL_STATE_PAGES", 1)),
+            "skip_if_fetched_days": int(getattr(settings, "BALLOTPEDIA_GEO_SKIP_IF_FETCHED_DAYS", 1)),
+        }
+        if bool(getattr(settings, "BALLOTPEDIA_GEO_WITH_OFFICEHOLDERS", False)):
+            kwargs["with_officeholders"] = True
+        call_command("sync_ballotpedia_geographic", **kwargs)
         return "ok"
     finally:
         cache.delete(lock_key)

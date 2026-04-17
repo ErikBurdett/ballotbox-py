@@ -16,6 +16,7 @@ from apps.elections.models import (
     Race,
     TermStatus,
 )
+from apps.geo.jurisdiction_canonical import get_or_create_canonical_city, get_or_create_canonical_county
 from apps.geo.models import District, DistrictType, Jurisdiction, JurisdictionType
 from apps.ingestion.models import Provider, SourceRecord, SyncRun
 from apps.offices.models import Office, OfficeBranch, OfficeLevel
@@ -166,14 +167,15 @@ def _jurisdiction_from_ocd(ocd_id: str) -> Jurisdiction:
             city = _slug_to_title(p.split(":", 1)[1])
 
     if city:
-        jurisdiction_type = JurisdictionType.CITY
-        name = city
-    elif county:
-        jurisdiction_type = JurisdictionType.COUNTY
-        name = f"{county} County"
-    elif state:
+        return get_or_create_canonical_city(state=state or "US", raw_name=city)
+    if county:
+        return get_or_create_canonical_county(state=state or "US", raw_name=f"{county} County")
+    if state:
         jurisdiction_type = JurisdictionType.STATE
         name = state
+    else:
+        jurisdiction_type = JurisdictionType.OTHER
+        name = "Unknown"
 
     obj, _ = Jurisdiction.objects.get_or_create(
         state=state or "US",

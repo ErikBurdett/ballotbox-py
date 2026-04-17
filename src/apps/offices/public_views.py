@@ -128,6 +128,8 @@ def officials_directory(request):
     q = (request.GET.get("q") or "").strip()
     state = (request.GET.get("state") or "").strip().upper()
     if not state:
+        state = str(getattr(settings, "BALLOTPEDIA_SYNC_STATE_CODE", "") or "").strip().upper()
+    if not state:
         try:
             state = str((getattr(settings, "DEMOCRACY_WORKS_SYNC", {}) or {}).get("state_code") or "").strip().upper()
         except Exception:

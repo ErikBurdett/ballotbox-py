@@ -1,0 +1,121 @@
+{% load humanize %}
+    <div class="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-7 space-y-6">
+        <div class="surface p-6">
+          <h2 class="text-lg font-semibold">Offices</h2>
+          {% if offices %}
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {% for office in offices %}
+                <a class="surface p-4 bg-white/5 border-white/10 shadow-none no-underline hover:bg-white/10 transition" href="{% url 'offices:office_detail' office.public_id %}">
+                  <div class="font-semibold">{{ office.name }}</div>
+                  <div class="mt-1 text-xs text-white/60">{{ office.get_level_display }} · {{ office.get_branch_display }}</div>
+                </a>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="mt-3 text-sm text-white/60">No offices yet.</div>
+          {% endif %}
+        </div>
+
+        <div class="surface p-6">
+          <h2 class="text-lg font-semibold">Races &amp; candidates</h2>
+          <p class="mt-1 text-sm text-white/60">Contests tied to this jurisdiction through the office, election, or district we have on file.</p>
+          {% if races %}
+            <div class="mt-4 space-y-4">
+              {% for race in races %}
+                <div class="surface p-4 bg-white/5 border-white/10 shadow-none">
+                  <div class="flex flex-wrap items-baseline justify-between gap-2">
+                    <a class="font-semibold no-underline hover:text-white/90" href="{% url 'elections:race_detail' race.public_id %}">{{ race.office.name }}</a>
+                    <span class="text-xs text-white/60 shrink-0">{{ race.election.date }} · {{ race.election.name }}</span>
+                  </div>
+                  {% if race.district %}
+                    <div class="mt-1 text-xs text-white/60"><a class="no-underline" href="{% url 'geo:district_detail' race.district.public_id %}">{{ race.district }}</a></div>
+                  {% endif %}
+                  {% if race.candidacies.all %}
+                    <ul class="mt-3 space-y-2 text-sm">
+                      {% for c in race.candidacies.all %}
+                        <li class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                          <a class="no-underline font-medium" href="{% url 'people:person_detail' c.person.public_id %}">{{ c.person.display_name }}</a>
+                          <span class="text-white/60">{{ c.display_party }}{% if c.is_incumbent %} · incumbent{% endif %}</span>
+                        </li>
+                      {% endfor %}
+                    </ul>
+                  {% else %}
+                    <div class="mt-2 text-xs text-white/60">No filed candidates in our dataset yet.</div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="mt-3 text-sm text-white/60">No races yet. Run geographic sync for this area to populate contests.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="lg:col-span-5 space-y-6">
+        <div class="surface p-6">
+          <h2 class="text-lg font-semibold">Recent officeholder updates</h2>
+          {% if current_terms %}
+            <div class="mt-4 space-y-3">
+              {% for term in current_terms %}
+                <div class="surface p-4 bg-white/5 border-white/10 shadow-none">
+                  <div class="font-semibold">
+                    <a class="no-underline" href="{% url 'people:person_detail' term.person.public_id %}">{{ term.person.display_name }}</a>
+                  </div>
+                  <div class="mt-1 text-sm text-white/70">
+                    <a class="no-underline" href="{% url 'offices:office_detail' term.office.public_id %}">{{ term.office.name }}</a>
+                    {% if term.district %} · <a class="no-underline" href="{% url 'geo:district_detail' term.district.public_id %}">{{ term.district }}</a>{% endif %}
+                  </div>
+                  <div class="mt-2 text-xs text-white/60">Updated {{ term.updated_at|naturaltime }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="mt-3 text-sm text-white/60">No terms yet.</div>
+          {% endif %}
+        </div>
+
+        <div class="surface p-6">
+          <h2 class="text-lg font-semibold">Elections</h2>
+          {% if elections %}
+            <div class="mt-4 space-y-2 text-sm">
+              {% for e in elections %}
+                <div class="flex items-center justify-between gap-4 border-b border-white/10 pb-2">
+                  <div class="min-w-0">
+                    <div class="font-semibold truncate">{{ e.name }}</div>
+                    <div class="text-xs text-white/60">{{ e.get_election_type_display }}</div>
+                  </div>
+                  <div class="text-white/70 shrink-0">{{ e.date }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="mt-3 text-sm text-white/60">No elections yet.</div>
+          {% endif %}
+        </div>
+
+        <div class="surface p-6">
+          <h2 class="text-lg font-semibold">Sources</h2>
+          <p class="mt-1 text-sm text-white/60">Raw provider payloads are stored for auditability.</p>
+          {% if sources %}
+            <div class="mt-4 space-y-2">
+              {% for s in sources %}
+                <div class="surface p-4 bg-white/5 border-white/10 shadow-none flex items-start justify-between gap-4">
+                  <div class="min-w-0">
+                    <div class="text-sm font-semibold">{{ s.get_provider_display }}</div>
+                    <div class="text-xs text-white/60 truncate">External ID: {{ s.external_id }}</div>
+                    {% if s.source_url %}
+                      <div class="text-xs text-white/60 truncate">URL: <a href="{{ s.source_url }}">{{ s.source_url }}</a></div>
+                    {% endif %}
+                    <div class="text-xs text-white/60 truncate">JSON: <a href="{% url 'api:source_record_detail' s.public_id %}">View payload</a></div>
+                  </div>
+                  <div class="text-xs text-white/60 shrink-0">Fetched {{ s.fetched_at|naturaltime }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="mt-4 text-sm text-white/60">No sources recorded yet.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>

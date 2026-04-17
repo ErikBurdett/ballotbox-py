@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.contrib.gis.db import models
+from django.utils.text import slugify
 
 from apps.core.models import PublicIdModel, ReviewableModel
 
@@ -66,6 +67,10 @@ class Jurisdiction(PublicIdModel, ReviewableModel):
             parts.append(self.county)
         parts.append(self.state)
         return " · ".join([p for p in parts if p])
+
+    def url_slug(self) -> str:
+        """Stable path segment for public county URLs (see ``geo:county_detail``)."""
+        return slugify(self.name)
 
 
 class District(PublicIdModel, ReviewableModel):

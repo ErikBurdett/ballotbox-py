@@ -16,6 +16,7 @@ from apps.elections.models import (
     Race,
     TermStatus,
 )
+from apps.geo.jurisdiction_canonical import get_or_create_canonical_city, get_or_create_canonical_county
 from apps.geo.models import District, DistrictType, Jurisdiction, JurisdictionType
 from apps.ingestion.models import Provider, SourceRecord, SyncRun
 from apps.ingestion.priority import priority
@@ -117,14 +118,25 @@ def normalize_demo_record(*, provider: Provider, payload: dict[str, Any], sync_r
     jurisdiction_obj = None
     j = payload.get("jurisdiction") or {}
     if j:
-        jurisdiction_obj, _ = Jurisdiction.objects.get_or_create(
-            state=(j.get("state") or "").upper(),
-            jurisdiction_type=j.get("jurisdiction_type") or JurisdictionType.OTHER,
-            name=j.get("name") or "Unknown jurisdiction",
-            county=j.get("county") or "",
-            city=j.get("city") or "",
-            defaults={},
-        )
+        st = (j.get("state") or "").upper()
+        jt_raw = j.get("jurisdiction_type") or JurisdictionType.OTHER
+        jt_lower = str(jt_raw).lower()
+        name = j.get("name") or "Unknown jurisdiction"
+        choice_values = {c[0] for c in JurisdictionType.choices}
+        if jt_raw == JurisdictionType.COUNTY or jt_lower == "county":
+            jurisdiction_obj = get_or_create_canonical_county(state=st, raw_name=name)
+        elif jt_raw == JurisdictionType.CITY or jt_lower == "city":
+            jurisdiction_obj = get_or_create_canonical_city(state=st, raw_name=name)
+        else:
+            jt = jt_raw if jt_raw in choice_values else JurisdictionType.OTHER
+            jurisdiction_obj, _ = Jurisdiction.objects.get_or_create(
+                state=st,
+                jurisdiction_type=jt,
+                name=name,
+                county=j.get("county") or "",
+                city=j.get("city") or "",
+                defaults={},
+            )
         if j.get("external_id"):
             _record_source(
                 provider=provider,

@@ -92,6 +92,16 @@ class Command(BaseCommand):
             return None
 
     def handle(self, *args, **options):
+        if not (getattr(settings, "DEMOCRACY_WORKS_API_KEY", "") or "").strip():
+            self.stdout.write(
+                self.style.WARNING(
+                    "DEMOCRACY_WORKS_API_KEY is not set (or expired). Skipping — existing Democracy Works "
+                    "data in the database is unchanged. For new fetches use: "
+                    "python manage.py sync_ballotpedia_geographic"
+                )
+            )
+            return
+
         # Allow running without container restart by mutating settings for this process.
         sync_cfg = getattr(settings, "DEMOCRACY_WORKS_SYNC", {}) or {}
         if not isinstance(sync_cfg, dict):

@@ -244,6 +244,16 @@ class Command(BaseCommand):
             },
         )
 
+        api_key = (getattr(settings, "DEMOCRACY_WORKS_API_KEY", "") or "").strip()
+        if not api_key:
+            run.status = SyncStatus.CANCELLED
+            run.error_text = "DEMOCRACY_WORKS_API_KEY not set; skipping DW candidate details."
+            run.finished_at = timezone.now()
+            run.save(update_fields=["status", "error_text", "finished_at", "updated_at"])
+            cache.delete(lock_key)
+            self.stdout.write(self.style.WARNING(run.error_text))
+            return
+
         def _cancel(signum, _frame):
             run.status = SyncStatus.CANCELLED
             run.error_text = f"Interrupted by signal={signum}"
@@ -257,7 +267,6 @@ class Command(BaseCommand):
         old_term = signal.signal(signal.SIGTERM, _cancel)
 
         try:
-            api_key = getattr(settings, "DEMOCRACY_WORKS_API_KEY", "")
             base_url = getattr(settings, "DEMOCRACY_WORKS_API_BASE_URL", "https://api.democracy.works/v2")
             client = DemocracyWorksClient(api_key=api_key, base_url=base_url, timeout_s=30)
 

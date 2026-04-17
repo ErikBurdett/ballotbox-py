@@ -1,0 +1,22 @@
+{% load humanize %}
+<div id="ballot-map-context-root" class="space-y-4">
+  {% if error %}
+    <div class="surface p-4 text-sm text-amber-100/90 border border-amber-400/30">{{ error }}</div>
+  {% else %}
+    {% if geo_match_note %}
+      <p class="text-sm text-white/70">{{ geo_match_note }}</p>
+    {% endif %}
+    {% if jurisdiction %}
+      <div class="surface p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold">{{ jurisdiction.name }}</h2>
+          <p class="text-xs text-white/60 mt-1">Data from your database for this county.</p>
+        </div>
+        {% if jurisdiction.jurisdiction_type == "county" %}
+          <a class="btn-outline no-underline text-sm" href="{% url 'geo:county_detail' jurisdiction.state jurisdiction.url_slug %}">Open county page</a>
+        {% endif %}
+      </div>
+      {% include "geo/_jurisdiction_hub_grid.html" %}
+    {% endif %}
+  {% endif %}
+</div>

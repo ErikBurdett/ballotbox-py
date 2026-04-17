@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.conf import settings
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
 from apps.ingestion.models import Provider
@@ -8,29 +9,53 @@ from apps.ingestion.tasks import sync_provider
 
 
 class Command(BaseCommand):
-    help = "Seed local/dev data: fixtures + (optional) Democracy Works."
+    help = "Seed local/dev data: demo fixtures + optional Ballotpedia geographic sync; Democracy Works is opt-in only."
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--dw-state",
-            default="TX",
-            help="Two-letter state code to sync from Democracy Works (default: TX).",
+            "--skip-ballotpedia-geo",
+            action="store_true",
+            help="Skip Ballotpedia geographic API sync even if BALLOTPEDIA_API_KEY is set.",
         )
         parser.add_argument(
-            "--skip-dw",
+            "--with-dw",
             action="store_true",
-            help="Skip Democracy Works sync even if API key is configured.",
+            help="Legacy: run Democracy Works when DEMOCRACY_WORKS_API_KEY is configured.",
+        )
+        parser.add_argument(
+            "--dw-state",
+            default="TX",
+            help="Two-letter state code for optional Democracy Works sync (with --with-dw).",
         )
 
     def handle(self, *args, **options):
-        # 1) Local demo fixtures (fictional)
+        # 1) Local demo fixtures (fictional) — excludes Democracy Works; Ballotpedia fixture skipped when API key set.
         for provider in [p for p, _label in Provider.choices if p != Provider.DEMOCRACY_WORKS]:
             run_id = sync_provider(provider)
             self.stdout.write(self.style.SUCCESS(f"{provider}: sync_run={run_id}"))
 
-        # 2) Democracy Works (real API, requires API key)
-        if options["skip_dw"]:
-            self.stdout.write(self.style.WARNING("Skipping Democracy Works sync (--skip-dw)."))
+        # 2) Ballotpedia geographic (real API — primary source for new election data when key is set)
+        if options["skip_ballotpedia_geo"]:
+            self.stdout.write(self.style.WARNING("Skipping Ballotpedia geographic sync (--skip-ballotpedia-geo)."))
+        elif not getattr(settings, "BALLOTPEDIA_API_KEY", ""):
+            self.stdout.write(
+                self.style.WARNING(
+                    "BALLOTPEDIA_API_KEY not set; skipping Ballotpedia geographic sync."
+                )
+            )
+        else:
+            call_command(
+                "sync_ballotpedia_geographic",
+                max_requests=160,
+                max_election_dates=14,
+                max_tx_calendar_pages=10,
+                tx_local_state_pages=1,
+                skip_if_fetched_days=1,
+            )
+            self.stdout.write(self.style.SUCCESS("Ballotpedia geographic sync finished."))
+
+        # 3) Optional legacy Democracy Works
+        if not options["with_dw"]:
             return
 
         state = (options["dw_state"] or "").strip().upper()
@@ -41,12 +66,11 @@ class Command(BaseCommand):
         if not getattr(settings, "DEMOCRACY_WORKS_API_KEY", ""):
             self.stdout.write(
                 self.style.WARNING(
-                    "DEMOCRACY_WORKS_API_KEY not set; skipping Democracy Works sync."
+                    "DEMOCRACY_WORKS_API_KEY not set; skipping optional Democracy Works sync (--with-dw)."
                 )
             )
             return
 
-        # Override sync scope for this run without requiring a restart.
         sync_cfg = getattr(settings, "DEMOCRACY_WORKS_SYNC", {}) or {}
         sync_cfg["state_code"] = state
         sync_cfg["amarillo_metro"] = False
@@ -61,4 +85,3 @@ class Command(BaseCommand):
 
         run_id = sync_provider(Provider.DEMOCRACY_WORKS)
         self.stdout.write(self.style.SUCCESS(f"democracy_works({state}): sync_run={run_id}"))
-
