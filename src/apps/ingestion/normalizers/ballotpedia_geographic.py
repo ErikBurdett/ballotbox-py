@@ -477,8 +477,8 @@ def district_matches_amarillo_metro(district: dict[str, Any]) -> bool:
 
 def _normalize_bp_election_block(*, sync_run: SyncRun, election_block: dict[str, Any], fetched_at: datetime) -> None:
     election_date = _parse_date(str(election_block.get("date") or "")) or date.today()
-    stage_type = str(election_block.get("stage_type") or election_block.get("type") or "")
-    election_type = _election_type_from_stage(stage_type)
+    # ``elections_by_point`` puts ``stage_type`` on each race; ``elections_by_state`` may set it on the block.
+    block_stage_type = str(election_block.get("stage_type") or election_block.get("type") or "")
 
     districts = election_block.get("districts") or []
     if not isinstance(districts, list):
@@ -488,12 +488,6 @@ def _normalize_bp_election_block(*, sync_run: SyncRun, election_block: dict[str,
         if not isinstance(district, dict):
             continue
         jurisdiction = _jurisdiction_from_bp_district(district)
-        election, _ = Election.objects.get_or_create(
-            jurisdiction=jurisdiction,
-            date=election_date,
-            election_type=election_type,
-            defaults={"name": f"Election {election_date.isoformat()}"},
-        )
 
         district_name = str(district.get("name") or "").strip()
         district_type_raw = str(district.get("type") or "")
@@ -515,6 +509,15 @@ def _normalize_bp_election_block(*, sync_run: SyncRun, election_block: dict[str,
             office_blob = race_payload.get("office") or {}
             if not isinstance(office_blob, dict):
                 continue
+            race_stage = str(race_payload.get("stage_type") or "").strip()
+            stage_for_election = race_stage or block_stage_type
+            election_type = _election_type_from_stage(stage_for_election)
+            election, _ = Election.objects.get_or_create(
+                jurisdiction=jurisdiction,
+                date=election_date,
+                election_type=election_type,
+                defaults={"name": f"Election {election_date.isoformat()}"},
+            )
             office_name = str(office_blob.get("name") or "Office").strip()
             level = _office_level(str(office_blob.get("level") or ""))
             branch = _office_branch(str(office_blob.get("branch") or ""))
@@ -556,7 +559,7 @@ def _normalize_bp_election_block(*, sync_run: SyncRun, election_block: dict[str,
                     source_url=str(race_payload.get("url") or ""),
                 )
 
-            stage_type_r = str(race_payload.get("stage_type") or stage_type)
+            stage_type_r = str(race_payload.get("stage_type") or block_stage_type)
             if stage_type_r:
                 if race.contest_type != stage_type_r[:64]:
                     race.contest_type = stage_type_r[:64]

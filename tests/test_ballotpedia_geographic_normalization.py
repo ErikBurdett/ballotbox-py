@@ -1,6 +1,6 @@
 from django.utils import timezone
 
-from apps.elections.models import Candidacy, Election, Race
+from apps.elections.models import Candidacy, Election, ElectionType, Race
 from apps.geo.models import Jurisdiction
 from apps.ingestion.models import Provider, SyncRun, SyncStatus
 from apps.ingestion.normalizers.ballotpedia_geographic import (
@@ -80,6 +80,50 @@ def test_normalize_ballotpedia_elections_by_point_minimal(db):
     assert Person.objects.filter(last_name="Example").exists()
     assert Candidacy.objects.exists()
     assert Jurisdiction.objects.filter(state="TX", name="Texas").exists()
+
+
+def test_normalize_ballotpedia_elections_by_point_runoff_uses_race_stage_type(db):
+    """Ballotpedia ``elections_by_point`` does not set ``stage_type`` on the election object — only on races."""
+    run = SyncRun.objects.create(provider=Provider.BALLOTPEDIA, status=SyncStatus.SUCCESS, finished_at=timezone.now())
+    payload = {
+        "success": True,
+        "data": {
+            "elections": [
+                {
+                    "date": "2025-12-06",
+                    "districts": [
+                        {
+                            "id": 2,
+                            "name": "Potter County",
+                            "type": "County",
+                            "state": "TX",
+                            "precise_boundary": True,
+                            "races": [
+                                {
+                                    "id": 910001,
+                                    "office": {
+                                        "name": "Potter County Commissioner Precinct 2",
+                                        "level": "Local",
+                                        "branch": "Executive",
+                                        "is_partisan": "Partisan all",
+                                        "seat": "",
+                                    },
+                                    "stage_type": "Runoff",
+                                    "candidates": [],
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+
+    normalize_ballotpedia_elections_by_point(sync_run=run, api_payload=payload)
+
+    assert Election.objects.filter(
+        date="2025-12-06", election_type=ElectionType.RUNOFF, jurisdiction__name="Potter County"
+    ).exists()
 
 
 def test_normalize_ballotpedia_elections_by_state_filtered_skips_non_metro(db):

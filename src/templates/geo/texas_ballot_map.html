@@ -5,42 +5,148 @@
 
 {% block content %}
   <section class="container-padded pt-10 pb-16">
-    <div class="surface p-6">
-      <h1 class="text-2xl font-semibold">Texas ballot map</h1>
-      <p class="mt-2 text-sm text-white/70 max-w-3xl">
-        County boundaries are shown for reference. Click anywhere in Texas to load offices, elections, races, and current officials
-        from the database for the county that contains that point. Address search uses the free
-        <a class="text-white underline decoration-white/30" href="https://geocoding.geo.census.gov/">U.S. Census geocoder</a>
-        (no Ballotpedia calls).
-      </p>
-    </div>
+    <div class="w-full max-w-4xl mx-auto px-0 sm:px-2">
+      <div class="surface p-5 sm:p-6 text-center sm:text-left">
+        <h1 class="text-2xl font-semibold">Texas ballot map</h1>
+        <p class="mt-2 text-sm text-white/70 max-w-3xl mx-auto sm:mx-0">
+          Hover the map for feature names and attributes. Turn on one or more <strong class="text-white/90">map layers</strong> under the map to stack county boundaries with U.S. House and Texas legislative districts (bundled GeoJSON from Census TIGERweb — similar idea to layered plans in tools like
+          <a class="text-white underline decoration-white/30" href="https://davesredistricting.org/maps#viewmap::1ea6b752-99fa-4bbb-8c4e-3110234ac5e6" rel="noopener noreferrer" target="_blank">Dave&rsquo;s Redistricting</a>).
+          Click anywhere in Texas (or search an address) to load <strong class="text-white/90">county-level</strong> offices, races, and officials from this database.
+          Address search uses the
+          <a class="text-white underline decoration-white/30" href="https://geocoding.geo.census.gov/">U.S. Census geocoder</a>.
+        </p>
+      </div>
 
-    <div class="mt-6 grid grid-cols-1 xl:grid-cols-12 gap-6">
-      <div class="xl:col-span-7 space-y-4">
-        <div class="surface p-4">
-          <form id="ballot-geocode-form" class="flex flex-col sm:flex-row gap-2 sm:items-end" action="#" onsubmit="return false;">
-            <div class="flex-1 min-w-0">
-              <label for="ballot-address" class="block text-xs font-semibold text-white/70 mb-1">Search address (Texas)</label>
+      <div class="mt-6 w-full max-w-6xl mx-auto space-y-4">
+        <div class="surface p-4 sm:p-5 max-w-2xl mx-auto w-full">
+          <form id="ballot-geocode-form" class="flex flex-col sm:flex-row gap-3 sm:items-end justify-center" action="#" onsubmit="return false;">
+            <div class="flex-1 min-w-0 w-full">
+              <label for="ballot-address" class="block text-xs font-semibold text-white/70 mb-1 text-center sm:text-left">Search address (Texas)</label>
               <input id="ballot-address" class="input" type="text" placeholder="Street, city, TX ZIP" autocomplete="street-address" />
             </div>
-            <button type="submit" class="btn shrink-0">Go</button>
+            <button type="submit" class="btn shrink-0 w-full sm:w-auto">Go</button>
           </form>
-          <p id="ballot-geocode-msg" class="mt-2 text-xs text-white/50 hidden"></p>
+          <p id="ballot-geocode-msg" class="mt-2 text-xs text-white/50 text-center sm:text-left hidden"></p>
         </div>
-        <div
-          id="ballot-map"
-          class="surface overflow-hidden border border-white/10"
-          style="height: 520px; min-height: 320px;"
-          data-context-url="{% url 'geo:texas_ballot_map_context' %}"
-          data-geocode-url="{% url 'geo:texas_ballot_map_geocode' %}"
-          data-geojson-url="{{ tx_counties_geojson_url }}"
-        ></div>
-        <p class="text-xs text-white/50">MapLibre + county lines from local GeoJSON. Basemap: MapLibre demo tiles.</p>
+
+        <div class="w-full max-w-6xl mx-auto">
+          <div
+            id="ballot-map-shell"
+            class="relative w-full rounded-2xl overflow-hidden border border-white/10 shadow-[0_18px_50px_rgba(0,0,0,.45)] bg-navy-950/40"
+          >
+            <div
+              id="ballot-map"
+              class="w-full touch-manipulation"
+              style="height: clamp(280px, min(52vh, 560px), 620px); min-height: 260px;"
+              data-context-url="{% url 'geo:texas_ballot_map_context' %}"
+              data-geocode-url="{% url 'geo:texas_ballot_map_geocode' %}"
+              data-geojson-url="{{ tx_counties_geojson_url }}"
+              data-cd119-url="{{ tx_cd119_geojson_url|default:'' }}"
+              data-sldu-url="{{ tx_sldu_geojson_url|default:'' }}"
+              data-sldl-url="{{ tx_sldl_geojson_url|default:'' }}"
+              data-school-url="{{ tx_school_geojson_url|default:'' }}"
+              data-water-url="{{ tx_water_geojson_url|default:'' }}"
+            ></div>
+            <div
+              id="county-hover-tooltip"
+              class="hidden absolute z-30 max-w-[min(440px,calc(100vw-1.5rem))] max-h-[min(55vh,480px)] overflow-y-auto overscroll-contain rounded-xl border border-white/15 bg-navy-900/95 px-3 py-2.5 text-left text-sm shadow-xl backdrop-blur-sm pointer-events-auto"
+              role="tooltip"
+              aria-live="polite"
+            ></div>
+          </div>
+          <p class="mt-2 text-xs text-white/45 text-center max-w-3xl mx-auto">
+            MapLibre. Counties and (when bundled) overlays: local GeoJSON under
+            <code class="font-mono text-white/55">static/geo/</code>. Legislative layers: U.S. Census
+            <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Legislative/MapServer" rel="noopener noreferrer" target="_blank">TIGERweb Legislative</a>;
+            school districts:
+            <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/School/MapServer" rel="noopener noreferrer" target="_blank">TIGERweb School</a>;
+            water districts:
+            <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://gisweb.tceq.texas.gov/arcgis/rest/services/Public/WaterDistricts/MapServer" rel="noopener noreferrer" target="_blank">TCEQ</a>.
+            Not a substitute for official election maps. Re-run
+            <code class="font-mono text-white/50">fetch_texas_legislative_geojson</code> if bundled files predate changes.
+            Basemap: MapLibre demo tiles.
+          </p>
+        </div>
+
+        <div class="surface p-4 sm:p-5 max-w-6xl mx-auto w-full">
+          <fieldset class="border-0 p-0 m-0">
+            <legend class="text-xs font-semibold text-white/70 uppercase tracking-wide mb-3 block w-full text-center sm:text-left">Map layers (toggle any combination)</legend>
+            <div class="flex flex-wrap items-center justify-center sm:justify-start gap-x-5 gap-y-2.5 text-sm">
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-counties" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" checked disabled />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-blue-500/80 border border-white/30"></span> Counties</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-cd119" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-violet-500/90 border border-white/30"></span> U.S. House (119th)</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-sldu" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-amber-500/90 border border-white/30"></span> Texas Senate</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-sldl" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-teal-400/90 border border-white/30"></span> Texas House</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-school" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-rose-400/90 border border-white/30"></span> School districts</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-water" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-sky-500/90 border border-white/30"></span> Water districts</span>
+              </label>
+            </div>
+            {% if not legislative_geo_bundled %}
+              <p class="mt-2 text-xs text-amber-200/80 text-center sm:text-left leading-relaxed">
+                District GeoJSON is not in <code class="font-mono text-white/80">static/geo/</code> yet. Run
+                <code class="font-mono text-white/80">python manage.py fetch_texas_legislative_geojson</code>
+                (from <code class="font-mono text-white/80">/app/src</code> in Docker), then reload — toggles become instant (no live Census/TCEQ calls). That command writes
+                <code class="font-mono text-white/70">tx-cd119</code>, <code class="font-mono text-white/70">tx-sldu</code>, <code class="font-mono text-white/70">tx-sldl</code>,
+                <code class="font-mono text-white/70">tx-school-districts</code>, and <code class="font-mono text-white/70">tx-water-districts</code>.
+                Re-run after updates to refresh attributes (e.g. POP100 and full field lists in tooltips).
+              </p>
+            {% endif %}
+          </fieldset>
+
+          <div class="mt-5 border-t border-white/10 pt-5 space-y-4">
+            <div>
+              <div class="text-[10px] font-semibold text-white/50 uppercase tracking-wide mb-2 text-center sm:text-left">Active layers (what the map is querying)</div>
+              <p class="text-xs text-white/40 mb-2 text-center sm:text-left leading-relaxed">
+                Only checked layers are included in hover inspection. Colors match the legend above.
+              </p>
+              <div id="map-active-layers" class="flex flex-wrap justify-center sm:justify-start gap-2 text-xs" aria-live="polite"></div>
+            </div>
+            <div>
+              <div class="text-[10px] font-semibold text-white/50 uppercase tracking-wide mb-2 text-center sm:text-left">
+                Feature under cursor
+                <span class="font-normal text-white/35 normal-case tracking-normal">
+                  — same details as the map hover tooltip (county plus any enabled district layers); use this panel to scroll long attribute lists without moving the pointer off the map
+                </span>
+              </div>
+              <div
+                id="map-hover-inspector"
+                class="max-h-[min(42vh,420px)] min-h-[108px] overflow-y-auto overscroll-contain rounded-xl border border-white/10 bg-navy-950/70 p-3 sm:p-4 text-left text-sm shadow-[inset_0_1px_0_rgba(255,255,255,.06)]"
+                role="region"
+                aria-label="GeoJSON attributes for features under the map cursor"
+                aria-live="polite"
+                tabindex="0"
+              >
+                <p class="text-sm text-white/45 leading-relaxed m-0">
+                  Move over the map to load county and district attributes here. This panel does not follow the pointer, so you can move the mouse inside it and scroll normally.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="xl:col-span-5 min-h-[200px]">
-        <h2 class="text-lg font-semibold mb-3">For this location</h2>
-        <div id="ballot-map-context" class="min-h-[120px]">
-          <div class="surface p-4 text-sm text-white/60">Click the map or search an address to see county-level data.</div>
+
+      <div class="mt-8 w-full max-w-6xl mx-auto px-0 sm:px-2">
+        <h2 class="text-lg font-semibold text-center mb-4">Results for your selection</h2>
+        <div id="ballot-map-context" class="w-full min-h-[120px]">
+          <div class="surface p-4 sm:p-6 text-sm text-white/60 text-center max-w-2xl mx-auto">
+            Click the map or search an address to see county-level data from the database.
+          </div>
         </div>
       </div>
     </div>
@@ -53,9 +159,66 @@
       var el = document.getElementById("ballot-map");
       if (!el || typeof maplibregl === "undefined") return;
 
+      var shell = document.getElementById("ballot-map-shell");
+      var tooltip = document.getElementById("county-hover-tooltip");
+      var inspector = document.getElementById("map-hover-inspector");
+      var activeLayersEl = document.getElementById("map-active-layers");
       var contextUrl = el.dataset.contextUrl;
       var geocodeUrl = el.dataset.geocodeUrl;
       var geojsonUrl = el.dataset.geojsonUrl;
+
+      var tigerSpecs = {
+        "layer-tx-cd119": {
+          sourceId: "tx-cd119",
+          fillId: "tx-cd119-fill",
+          lineId: "tx-cd119-line",
+          dataUrlKey: "cd119Url",
+          fillColor: "#a855f7",
+          fillOpacity: 0.075,
+          lineColor: "rgba(196, 181, 253, 0.82)",
+          lineWidth: 1.15,
+        },
+        "layer-tx-sldu": {
+          sourceId: "tx-sldu",
+          fillId: "tx-sldu-fill",
+          lineId: "tx-sldu-line",
+          dataUrlKey: "slduUrl",
+          fillColor: "#f59e0b",
+          fillOpacity: 0.07,
+          lineColor: "rgba(253, 224, 171, 0.78)",
+          lineWidth: 1.05,
+        },
+        "layer-tx-sldl": {
+          sourceId: "tx-sldl",
+          fillId: "tx-sldl-fill",
+          lineId: "tx-sldl-line",
+          dataUrlKey: "sldlUrl",
+          fillColor: "#2dd4bf",
+          fillOpacity: 0.065,
+          lineColor: "rgba(153, 246, 228, 0.78)",
+          lineWidth: 1.0,
+        },
+        "layer-tx-school": {
+          sourceId: "tx-school",
+          fillId: "tx-school-fill",
+          lineId: "tx-school-line",
+          dataUrlKey: "schoolUrl",
+          fillColor: "#fb7185",
+          fillOpacity: 0.065,
+          lineColor: "rgba(254, 205, 211, 0.78)",
+          lineWidth: 1.0,
+        },
+        "layer-tx-water": {
+          sourceId: "tx-water",
+          fillId: "tx-water-fill",
+          lineId: "tx-water-line",
+          dataUrlKey: "waterUrl",
+          fillColor: "#0ea5e9",
+          fillOpacity: 0.065,
+          lineColor: "rgba(125, 211, 252, 0.78)",
+          lineWidth: 1.0,
+        },
+      };
 
       var map = new maplibregl.Map({
         container: "ballot-map",
@@ -69,6 +232,7 @@
       map.addControl(new maplibregl.NavigationControl(), "top-right");
 
       var marker = null;
+
       function loadContext(lat, lng) {
         var url = contextUrl + "?lat=" + encodeURIComponent(lat) + "&lng=" + encodeURIComponent(lng);
         fetch(url)
@@ -82,6 +246,354 @@
         marker = new maplibregl.Marker({ color: "#E11D48" }).setLngLat([lng, lat]).addTo(map);
       }
 
+      var INSPECTOR_EMPTY_HOVER =
+        '<p class="text-sm text-white/40 m-0">No visible polygon under the cursor — pan or zoom so the pointer sits inside Texas, or turn on additional layers above.</p>';
+      var INSPECTOR_NO_LAYERS =
+        '<p class="text-sm text-amber-100/85 m-0">No map layers are visible for inspection. Turn on at least <strong class="text-white/90">Counties</strong> (or district layers when available) using the toggles above.</p>';
+
+      function setInspectorHtml(html) {
+        if (!inspector) return;
+        inspector.innerHTML = html;
+      }
+
+      function hideCountyTooltip() {
+        if (!tooltip) return;
+        tooltip.classList.add("hidden");
+        tooltip.innerHTML = "";
+      }
+
+      function positionTooltip(clientX, clientY) {
+        if (!shell || !tooltip) return;
+        var rect = shell.getBoundingClientRect();
+        var pad = 12;
+        var tw = tooltip.offsetWidth || 200;
+        var th = tooltip.offsetHeight || 80;
+        var x = clientX - rect.left + pad;
+        var y = clientY - rect.top + pad;
+        if (x + tw > rect.width - 8) x = clientX - rect.left - tw - pad;
+        if (x < 8) x = 8;
+        if (y + th > rect.height - 8) y = clientY - rect.top - th - pad;
+        if (y < 8) y = 8;
+        tooltip.style.left = x + "px";
+        tooltip.style.top = y + "px";
+      }
+
+      function showHoverTooltip(html, clientX, clientY) {
+        if (!tooltip) return;
+        tooltip.innerHTML = html;
+        tooltip.classList.remove("hidden");
+        requestAnimationFrame(function () {
+          positionTooltip(clientX, clientY);
+        });
+      }
+
+      function refreshActiveLayersSummary() {
+        if (!activeLayersEl) return;
+        function chip(label, dotClass, active, unavailable) {
+          var base =
+            "inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1 text-xs ";
+          var state;
+          if (unavailable) {
+            state = "opacity-40 line-through decoration-white/25 bg-white/[0.02] text-white/50";
+          } else if (active) {
+            state = "bg-white/[0.07] text-white/90";
+          } else {
+            state = "opacity-45 line-through decoration-white/30 bg-white/[0.02] text-white/55";
+          }
+          return (
+            '<span class="' +
+            base +
+            state +
+            '"><span class="h-2 w-2 shrink-0 rounded-sm ' +
+            dotClass +
+            ' border border-white/25"></span><span>' +
+            escapeHtml(label) +
+            "</span></span>"
+          );
+        }
+        var cCo = document.getElementById("layer-tx-counties");
+        var cCd = document.getElementById("layer-tx-cd119");
+        var cSu = document.getElementById("layer-tx-sldu");
+        var cSl = document.getElementById("layer-tx-sldl");
+        var parts = [];
+        parts.push(chip("Counties", "bg-blue-500/85", !!(cCo && cCo.checked), false));
+        parts.push(
+          chip(
+            "U.S. House (119th)",
+            "bg-violet-500/90",
+            !!(cCd && cCd.checked && !cCd.disabled),
+            !!(cCd && cCd.disabled),
+          ),
+        );
+        parts.push(
+          chip("Texas Senate", "bg-amber-500/90", !!(cSu && cSu.checked && !cSu.disabled), !!(cSu && cSu.disabled)),
+        );
+        parts.push(
+          chip("Texas House", "bg-teal-400/90", !!(cSl && cSl.checked && !cSl.disabled), !!(cSl && cSl.disabled)),
+        );
+        var cSc = document.getElementById("layer-tx-school");
+        var cWa = document.getElementById("layer-tx-water");
+        parts.push(
+          chip(
+            "School districts",
+            "bg-rose-400/90",
+            !!(cSc && cSc.checked && !cSc.disabled),
+            !!(cSc && cSc.disabled),
+          ),
+        );
+        parts.push(
+          chip("Water districts", "bg-sky-500/90", !!(cWa && cWa.checked && !cWa.disabled), !!(cWa && cWa.disabled)),
+        );
+        activeLayersEl.innerHTML = parts.join("");
+      }
+
+      function escapeHtml(s) {
+        if (s == null) return "";
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function formatPropertiesTable(props) {
+        var keys = Object.keys(props || {}).sort(function (a, b) {
+          return a.toLowerCase().localeCompare(b.toLowerCase());
+        });
+        if (!keys.length) {
+          return '<div class="text-[11px] text-white/45 mt-1">No attributes on this feature.</div>';
+        }
+        var rows = [];
+        for (var i = 0; i < keys.length; i++) {
+          var k = keys[i];
+          var raw = props[k];
+          var v =
+            raw === null || raw === undefined
+              ? ""
+              : typeof raw === "object"
+                ? JSON.stringify(raw)
+                : String(raw);
+          rows.push(
+            '<tr><td class="align-top pr-2 py-0.5 text-white/45 font-mono text-[10px] whitespace-nowrap">' +
+              escapeHtml(k) +
+              '</td><td class="py-0.5 text-white/85 text-[11px] break-words max-w-[220px]">' +
+              escapeHtml(v) +
+              "</td></tr>"
+          );
+        }
+        return (
+          '<table class="w-full border-collapse mt-1.5 text-left"><tbody>' +
+          rows.join("") +
+          "</tbody></table>"
+        );
+      }
+
+      function formatPopLine(props) {
+        var pop = props.POP100;
+        if (pop == null || pop === "") return "";
+        var pn = Number(pop);
+        if (!isNaN(pn)) {
+          return (
+            '<div class="text-xs text-white/70 mt-1.5">Population <span class="text-white/55">(Census POP100)</span>: ' +
+            '<span class="text-white font-semibold">' +
+            pn.toLocaleString() +
+            "</span></div>"
+          );
+        }
+        return (
+          '<div class="text-xs text-white/70 mt-1.5">Population (POP100): ' + escapeHtml(String(pop)) + "</div>"
+        );
+      }
+
+      function formatCountyTooltipHtml(feature) {
+        var p = feature.properties || {};
+        var name = (p.NAME || "").trim();
+        var lsad = (p.LSAD || "").trim();
+        var label = name;
+        if (lsad.toLowerCase() === "county" && name.toLowerCase().indexOf("county") < 0) {
+          label = name + " County";
+        } else if (lsad && lsad.toLowerCase() !== "county") {
+          label = name + " (" + lsad + ")";
+        }
+        return (
+          '<div class="text-[10px] font-bold uppercase tracking-wide text-violet-200/90 mb-1">County</div>' +
+          '<div class="font-semibold text-white leading-snug">' +
+          escapeHtml(label || "County") +
+          "</div>" +
+          formatPopLine(p) +
+          '<div class="text-[10px] font-semibold text-white/40 uppercase tracking-wide mt-2.5 mb-0.5 border-t border-white/10 pt-2">All attributes (GeoJSON)</div>' +
+          formatPropertiesTable(p)
+        );
+      }
+
+      function layerKindTitle(layerId) {
+        if (layerId === "tx-cd119-fill") return "U.S. House";
+        if (layerId === "tx-sldu-fill") return "Texas Senate";
+        if (layerId === "tx-sldl-fill") return "Texas House";
+        if (layerId === "tx-school-fill") return "School district (Census)";
+        if (layerId === "tx-water-fill") return "Water district (TCEQ)";
+        return "District";
+      }
+
+      function districtDisplayName(props) {
+        var keys = ["NAME", "DISTRICT", "DISTRICT_NM", "DIST_NAME", "DISTRICT_NAME", "LABEL", "BASENAME", "GNIS_NAME"];
+        for (var i = 0; i < keys.length; i++) {
+          var raw = props[keys[i]];
+          var v = raw == null ? "" : String(raw).trim();
+          if (v) return v;
+        }
+        return "District";
+      }
+
+      function layerAttrsCaption(layerId) {
+        if (layerId === "tx-water-fill") return "All attributes (TCEQ)";
+        if (layerId === "tx-school-fill") return "All attributes (Census School)";
+        return "All attributes (Census TIGERweb)";
+      }
+
+      function formatDistrictTooltipHtml(layerId, feature) {
+        var p = feature.properties || {};
+        var name = districtDisplayName(p);
+        return (
+          '<div class="text-[10px] font-bold uppercase tracking-wide text-white/55 mb-1">' +
+          escapeHtml(layerKindTitle(layerId)) +
+          "</div>" +
+          '<div class="font-semibold text-white leading-snug">' +
+          escapeHtml(name) +
+          "</div>" +
+          formatPopLine(p) +
+          '<div class="text-[10px] font-semibold text-white/40 uppercase tracking-wide mt-2.5 mb-0.5 border-t border-white/10 pt-2">' +
+          escapeHtml(layerAttrsCaption(layerId)) +
+          "</div>" +
+          formatPropertiesTable(p)
+        );
+      }
+
+      /** Layers to query on hover: county fill is always included (near-transparent when off) so the county block can stay on top in the tooltip. */
+      function tooltipFillLayerIds() {
+        var ids = [];
+        if (map.getLayer("tx-counties-fill")) {
+          ids.push("tx-counties-fill");
+        }
+        Object.keys(tigerSpecs).forEach(function (key) {
+          var sp = tigerSpecs[key];
+          var elCb = document.getElementById(key);
+          if (!elCb || !elCb.checked || !map.getLayer(sp.fillId)) return;
+          ids.push(sp.fillId);
+        });
+        return ids;
+      }
+
+      function setCountyVisibility(visible) {
+        if (!map.getLayer("tx-counties-fill")) return;
+        if (visible) {
+          map.setPaintProperty("tx-counties-fill", "fill-opacity", 0.08);
+          map.setLayoutProperty("tx-counties-line", "visibility", "visible");
+        } else {
+          map.setPaintProperty("tx-counties-fill", "fill-opacity", 0.001);
+          map.setLayoutProperty("tx-counties-line", "visibility", "none");
+        }
+      }
+
+      function addBundledLegislativeLayers(spec, url) {
+        if (map.getSource(spec.sourceId)) return;
+        map.addSource(spec.sourceId, { type: "geojson", data: url });
+        map.addLayer({
+          id: spec.fillId,
+          type: "fill",
+          source: spec.sourceId,
+          layout: { visibility: "none" },
+          paint: {
+            "fill-color": spec.fillColor,
+            "fill-opacity": spec.fillOpacity,
+          },
+        });
+        map.addLayer({
+          id: spec.lineId,
+          type: "line",
+          source: spec.sourceId,
+          layout: { visibility: "none" },
+          paint: {
+            "line-color": spec.lineColor,
+            "line-width": spec.lineWidth,
+          },
+        });
+      }
+
+      function setTigerVisibility(spec, visible) {
+        if (!map.getLayer(spec.fillId)) return;
+        var vis = visible ? "visible" : "none";
+        map.setLayoutProperty(spec.fillId, "visibility", vis);
+        map.setLayoutProperty(spec.lineId, "visibility", vis);
+      }
+
+      function wireLegislativeCheckbox(checkboxId) {
+        var spec = tigerSpecs[checkboxId];
+        if (!spec) return;
+        var cb = document.getElementById(checkboxId);
+        if (!cb) return;
+        cb.addEventListener("change", function () {
+          if (!map.getLayer(spec.fillId)) return;
+          setTigerVisibility(spec, cb.checked);
+          refreshActiveLayersSummary();
+        });
+      }
+
+      function buildStackedTooltipHtml(features) {
+        if (!features.length) return "";
+        function tooltipSectionOrder(layerId) {
+          var order = [
+            "tx-counties-fill",
+            "tx-cd119-fill",
+            "tx-sldu-fill",
+            "tx-sldl-fill",
+            "tx-school-fill",
+            "tx-water-fill",
+          ];
+          var i = order.indexOf(layerId);
+          return i === -1 ? 50 : i;
+        }
+        var sorted = features.slice().sort(function (a, b) {
+          return tooltipSectionOrder(a.layer.id) - tooltipSectionOrder(b.layer.id);
+        });
+        var seen = {};
+        var uniq = [];
+        for (var u = 0; u < sorted.length; u++) {
+          var lid0 = sorted[u].layer.id;
+          if (seen[lid0]) continue;
+          seen[lid0] = true;
+          uniq.push(sorted[u]);
+        }
+        var parts = [];
+        for (var i = 0; i < uniq.length; i++) {
+          var f = uniq[i];
+          var lid = f.layer.id;
+          var block =
+            lid === "tx-counties-fill"
+              ? formatCountyTooltipHtml(f)
+              : formatDistrictTooltipHtml(lid, f);
+          if (i > 0) block = '<div class="mt-2.5 pt-2.5 border-t border-white/10">' + block + "</div>";
+          parts.push(block);
+        }
+        return (
+          parts.join("") +
+          '<div class="text-[11px] text-white/45 mt-2.5 border-t border-white/10 pt-1.5">Click for county database results below</div>'
+        );
+      }
+
+      Object.keys(tigerSpecs).forEach(function (checkboxId) {
+        var sp = tigerSpecs[checkboxId];
+        var raw = el.dataset[sp.dataUrlKey];
+        var url = raw && String(raw).trim() ? String(raw).trim() : "";
+        var cb = document.getElementById(checkboxId);
+        if (cb && !url) {
+          cb.disabled = true;
+          cb.checked = false;
+        }
+      });
+
+      refreshActiveLayersSummary();
+
       map.on("load", function () {
         map.addSource("tx-counties", {
           type: "geojson",
@@ -91,21 +603,73 @@
           id: "tx-counties-fill",
           type: "fill",
           source: "tx-counties",
-          paint: { "fill-color": "#2563EB", "fill-opacity": 0.06 },
+          paint: { "fill-color": "#2563EB", "fill-opacity": 0.08 },
         });
         map.addLayer({
           id: "tx-counties-line",
           type: "line",
           source: "tx-counties",
-          paint: { "line-color": "rgba(255,255,255,0.35)", "line-width": 0.8 },
+          paint: { "line-color": "rgba(255,255,255,0.38)", "line-width": 0.85 },
+        });
+
+        Object.keys(tigerSpecs).forEach(function (checkboxId) {
+          var sp = tigerSpecs[checkboxId];
+          var raw = el.dataset[sp.dataUrlKey];
+          var url = raw && String(raw).trim() ? String(raw).trim() : "";
+          if (url) addBundledLegislativeLayers(sp, url);
+        });
+
+        var countyCb = document.getElementById("layer-tx-counties");
+        if (countyCb) {
+          countyCb.disabled = false;
+          countyCb.addEventListener("change", function () {
+            setCountyVisibility(countyCb.checked);
+            refreshActiveLayersSummary();
+          });
+        }
+
+        Object.keys(tigerSpecs).forEach(function (checkboxId) {
+          wireLegislativeCheckbox(checkboxId);
         });
 
         map.on("click", function (e) {
+          hideCountyTooltip();
+          setInspectorHtml(
+            '<p class="text-xs text-white/55 m-0">Loading <strong class="text-white/80">Results for your selection</strong> below…</p>',
+          );
           var lng = e.lngLat.lng;
           var lat = e.lngLat.lat;
           loadContext(lat, lng);
         });
-        map.getCanvas().style.cursor = "crosshair";
+
+        map.on("mousemove", function (e) {
+          var layerIds = tooltipFillLayerIds();
+          var ev = e.originalEvent;
+          if (!layerIds.length) {
+            hideCountyTooltip();
+            setInspectorHtml(INSPECTOR_NO_LAYERS);
+            map.getCanvas().style.cursor = "";
+            return;
+          }
+          var features = map.queryRenderedFeatures(e.point, { layers: layerIds });
+          if (!features.length) {
+            hideCountyTooltip();
+            setInspectorHtml(INSPECTOR_EMPTY_HOVER);
+            map.getCanvas().style.cursor = "";
+            return;
+          }
+          var html = buildStackedTooltipHtml(features);
+          setInspectorHtml(html);
+          showHoverTooltip(html, ev.clientX, ev.clientY);
+          map.getCanvas().style.cursor = "pointer";
+        });
+
+        if (shell) {
+          shell.addEventListener("mouseleave", function () {
+            hideCountyTooltip();
+            map.getCanvas().style.cursor = "";
+          });
+        }
       });
 
       document.getElementById("ballot-geocode-form").addEventListener("submit", function (ev) {

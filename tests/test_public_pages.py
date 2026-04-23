@@ -22,6 +22,14 @@ def test_home_page(client):
 
 
 @pytest.mark.django_db
+def test_resources_page(client):
+    resp = client.get(reverse("core:resources"))
+    assert resp.status_code == 200
+    assert b"Voter resources" in resp.content
+    assert b"davesredistricting.org" in resp.content
+
+
+@pytest.mark.django_db
 def test_person_office_geo_detail_pages(client):
     district = DistrictFactory()
     office = OfficeFactory(jurisdiction=district.jurisdiction, default_district=district)

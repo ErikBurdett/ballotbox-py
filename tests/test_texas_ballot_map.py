@@ -11,6 +11,7 @@ def test_texas_ballot_map_page(client):
     resp = client.get(reverse("geo:texas_ballot_map"))
     assert resp.status_code == 200
     assert b"Texas ballot map" in resp.content
+    assert b"Map layers" in resp.content
     assert b"maplibre-gl" in resp.content.lower() or b"maplibre" in resp.content.lower()
 
 

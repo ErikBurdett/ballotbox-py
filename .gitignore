@@ -8,3 +8,11 @@ node_modules/
 src/static/css/app.css
 src/staticfiles/
 db_data/
+
+# Texas legislative GeoJSON from Census TIGERweb (~55 MiB total). Generate locally:
+#   python manage.py fetch_texas_legislative_geojson
+src/static/geo/tx-cd119.geojson
+src/static/geo/tx-sldu.geojson
+src/static/geo/tx-sldl.geojson
+src/static/geo/tx-school-districts.geojson
+src/static/geo/tx-water-districts.geojson

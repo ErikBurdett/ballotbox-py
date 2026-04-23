@@ -209,8 +209,15 @@ def sync_ballotpedia_geographic_scheduled() -> str:
             "tx_local_state_pages": int(getattr(settings, "BALLOTPEDIA_GEO_TX_LOCAL_STATE_PAGES", 1)),
             "skip_if_fetched_days": int(getattr(settings, "BALLOTPEDIA_GEO_SKIP_IF_FETCHED_DAYS", 1)),
         }
+        geo_preset = (getattr(settings, "BALLOTPEDIA_GEO_PRESET", "") or "").strip().lower()
+        if geo_preset == "panhandle":
+            kwargs["preset"] = "panhandle"
+        elif geo_preset == "panhandle_north":
+            kwargs["preset"] = "panhandle_north"
         if bool(getattr(settings, "BALLOTPEDIA_GEO_WITH_OFFICEHOLDERS", False)):
             kwargs["with_officeholders"] = True
+        if bool(getattr(settings, "BALLOTPEDIA_GEO_GEOGRAPHIC_ONLY", False)):
+            kwargs["geographic_only"] = True
         call_command("sync_ballotpedia_geographic", **kwargs)
         return "ok"
     finally:

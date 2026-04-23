@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Texas runoffs · {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}Runoff elections in Texas from 2025 onward (plus upcoming runoffs), and a directory of counties, cities, and other jurisdictions where local runoffs can appear in our data.{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+
+{% block content %}
+  <section class="container-padded pt-10 pb-16 space-y-10">
+    <div class="surface p-6">
+      <p class="text-xs text-white/50 uppercase tracking-wide">
+        <a class="hover:text-white" href="{% url 'elections:candidates_directory' %}">Candidates</a>
+        <span class="text-white/30 mx-2">/</span>
+        <a class="hover:text-white" href="{% url 'elections:races_list_texas' %}">Texas races</a>
+        <span class="text-white/30 mx-2">/</span>
+        Texas runoffs
+      </p>
+      <h1 class="mt-2 text-2xl font-semibold">Texas runoffs</h1>
+      <p class="mt-2 text-sm text-white/70 max-w-3xl">
+        This page lists <strong class="text-white/90">runoff-type elections</strong> we have on file for Texas jurisdictions
+        (election date on or after {{ runoff_directory_start|date:"F j, Y" }}, or on or after today — {{ today|date:"F j, Y" }}).
+        Below that is a directory of <strong class="text-white/90">counties, cities, towns, school districts, and other Texas jurisdictions</strong>
+        in the database, with how many qualifying runoffs we currently store for each. Data depends on ingestion (e.g. Ballotpedia geographic sync); empty lists are normal until syncs run.
+      </p>
+    </div>
+
+    <div class="surface p-6" id="runoff-elections">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <h2 class="text-lg font-semibold">Runoff elections</h2>
+        <p class="text-sm text-white/55">
+          {{ elections_page.paginator.count }} election{{ elections_page.paginator.count|pluralize }} · page {{ elections_page.number }} of {{ elections_page.paginator.num_pages }}
+        </p>
+      </div>
+      {% if elections_page.paginator.count == 0 %}
+        <p class="mt-4 text-sm text-white/55">No Texas runoff elections match this date rule yet.</p>
+      {% else %}
+        <div class="mt-4 overflow-x-auto rounded-xl border border-white/10">
+          <table class="w-full text-sm text-left min-w-[42rem]">
+            <thead class="text-xs uppercase tracking-wide text-white/50 border-b border-white/10">
+              <tr>
+                <th class="py-3 px-3 font-semibold">Date</th>
+                <th class="py-3 px-3 font-semibold">Jurisdiction</th>
+                <th class="py-3 px-3 font-semibold">Election</th>
+                <th class="py-3 px-3 font-semibold">Races</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/10">
+              {% for election in elections_page %}
+                <tr class="{% if election.date >= today %}bg-emerald-500/5{% endif %}">
+                  <td class="py-3 px-3 whitespace-nowrap text-white/90">
+                    {{ election.date|date:"M j, Y" }}
+                    {% if election.date >= today %}
+                      <span class="ml-1 text-[10px] font-bold uppercase text-emerald-300/90">Upcoming</span>
+                    {% endif %}
+                  </td>
+                  <td class="py-3 px-3">
+                    <a class="text-patriot-blue font-medium underline hover:text-white" href="{% url 'geo:jurisdiction_detail' election.jurisdiction.public_id %}">
+                      {{ election.jurisdiction.name }}
+                    </a>
+                    <div class="text-[11px] text-white/45">{{ election.jurisdiction.get_jurisdiction_type_display }} · {{ election.jurisdiction.state }}</div>
+                  </td>
+                  <td class="py-3 px-3 text-white/80">{{ election.name }}</td>
+                  <td class="py-3 px-3">
+                    {% with races=election.races.all %}
+                      {% if races %}
+                        <ul class="list-none m-0 p-0 space-y-1">
+                          {% for race in races %}
+                            <li>
+                              <a class="text-patriot-blue underline hover:text-white text-[13px]" href="{% url 'elections:race_detail' race.public_id %}">
+                                {{ race.office.name }}{% if race.district %} · {{ race.district.name }}{% endif %}
+                              </a>
+                            </li>
+                          {% endfor %}
+                        </ul>
+                      {% else %}
+                        <span class="text-white/40">—</span>
+                      {% endif %}
+                    {% endwith %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if elections_page.has_other_pages %}
+          <nav class="mt-4 flex flex-wrap gap-2 text-sm" aria-label="Runoff elections pagination">
+            {% if elections_page.has_previous %}
+              <a class="btn-outline no-underline" href="?page={{ elections_page.previous_page_number }}{% if request.GET.jx_page %}&jx_page={{ request.GET.jx_page }}{% endif %}">Previous</a>
+            {% endif %}
+            {% if elections_page.has_next %}
+              <a class="btn-outline no-underline" href="?page={{ elections_page.next_page_number }}{% if request.GET.jx_page %}&jx_page={{ request.GET.jx_page }}{% endif %}">Next</a>
+            {% endif %}
+          </nav>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    <div class="surface p-6" id="jurisdictions">
+      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <h2 class="text-lg font-semibold">Jurisdictions (where runoffs can appear)</h2>
+        <p class="text-sm text-white/55">
+          {{ jurisdictions_page.paginator.count }} place{{ jurisdictions_page.paginator.count|pluralize }} · page {{ jurisdictions_page.number }} of {{ jurisdictions_page.paginator.num_pages }}
+        </p>
+      </div>
+      <p class="mt-2 text-xs text-white/45">
+        “Runoffs” column counts elections with type <span class="font-mono text-white/55">runoff</span> and the same date rule as above.
+      </p>
+      {% if jurisdictions_page.paginator.count == 0 %}
+        <p class="mt-4 text-sm text-white/55">No Texas jurisdictions in the database yet.</p>
+      {% else %}
+        <div class="mt-4 overflow-x-auto rounded-xl border border-white/10">
+          <table class="w-full text-sm text-left min-w-[40rem]">
+            <thead class="text-xs uppercase tracking-wide text-white/50 border-b border-white/10">
+              <tr>
+                <th class="py-3 px-3 font-semibold">Type</th>
+                <th class="py-3 px-3 font-semibold">Name</th>
+                <th class="py-3 px-3 font-semibold">County / city fields</th>
+                <th class="py-3 px-3 font-semibold text-right">Runoffs</th>
+                <th class="py-3 px-3 font-semibold">Hub</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/10">
+              {% for j in jurisdictions_page %}
+                <tr>
+                  <td class="py-2.5 px-3 text-white/60 whitespace-nowrap">{{ j.get_jurisdiction_type_display }}</td>
+                  <td class="py-2.5 px-3 text-white/90 font-medium">{{ j.name }}</td>
+                  <td class="py-2.5 px-3 text-white/55 text-xs">
+                    {% if j.county %}<span class="text-white/70">County:</span> {{ j.county }}{% endif %}
+                    {% if j.city %}{% if j.county %} · {% endif %}<span class="text-white/70">City:</span> {{ j.city }}{% endif %}
+                    {% if not j.county and not j.city %}—{% endif %}
+                  </td>
+                  <td class="py-2.5 px-3 text-right font-mono text-white/80">{{ j.runoff_count|intcomma }}</td>
+                  <td class="py-2.5 px-3">
+                    <a class="text-patriot-blue underline hover:text-white text-xs" href="{% url 'geo:jurisdiction_detail' j.public_id %}">Open</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if jurisdictions_page.has_other_pages %}
+          <nav class="mt-4 flex flex-wrap gap-2 text-sm" aria-label="Jurisdictions pagination">
+            {% if jurisdictions_page.has_previous %}
+              <a class="btn-outline no-underline" href="?jx_page={{ jurisdictions_page.previous_page_number }}{% if request.GET.page %}&page={{ request.GET.page }}{% endif %}">Previous places</a>
+            {% endif %}
+            {% if jurisdictions_page.has_next %}
+              <a class="btn-outline no-underline" href="?jx_page={{ jurisdictions_page.next_page_number }}{% if request.GET.page %}&page={{ request.GET.page }}{% endif %}">Next places</a>
+            {% endif %}
+          </nav>
+        {% endif %}
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}

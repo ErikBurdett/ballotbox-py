@@ -12,3 +12,7 @@ def privacy(request):
 def terms(request):
     return render(request, "core/terms.html")
 
+
+def resources(request):
+    return render(request, "core/resources.html")
+

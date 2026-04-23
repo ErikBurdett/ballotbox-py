@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Voter resources — {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}Helpful external links for maps, voter registration, polling places, and election transparency.{% endblock %}
+
+{% block content %}
+  <div class="container-padded py-10">
+    <article class="surface max-w-3xl mx-auto p-8 text-white/90 text-sm leading-relaxed space-y-8">
+      <header class="space-y-2">
+        <h1 class="text-2xl font-bold text-white" style="font-family: Oswald, system-ui, sans-serif;">Voter resources</h1>
+        <p class="text-white/60 text-xs uppercase tracking-wide">Curated links — {{ SITE_NAME }} does not operate these sites.</p>
+        <p class="text-white/75">
+          Use these tools to explore district maps, check registration, find where to vote, and review public campaign data.
+          Always verify deadlines and rules with your <strong class="text-white">state or county election office</strong>.
+        </p>
+      </header>
+
+      <section class="space-y-3">
+        <h2 class="text-lg font-semibold text-white uppercase tracking-wide" style="font-family: Oswald, system-ui, sans-serif;">Maps &amp; boundaries</h2>
+        <ul class="list-disc pl-5 space-y-2 marker:text-white/40">
+          <li>
+            <a class="text-patriot-blue font-semibold underline hover:text-white" href="https://davesredistricting.org/maps#viewmap::1ea6b752-99fa-4bbb-8c4e-3110234ac5e6" rel="noopener noreferrer" target="_blank">Dave&rsquo;s Redistricting (DRA) — example map view</a>
+            — interactive plans for legislative and congressional districts (community tool; not an official government map).
+          </li>
+          <li>
+            <a class="text-patriot-blue font-semibold underline hover:text-white" href="https://davesredistricting.org/" rel="noopener noreferrer" target="_blank">Dave&rsquo;s Redistricting — home</a>
+            — browse other maps and learn how plans are drawn and compared.
+          </li>
+          <li>
+            <a class="text-patriot-blue font-semibold underline hover:text-white" href="{% url 'geo:texas_ballot_map' %}">Texas ballot map on {{ SITE_NAME }}</a>
+            — our in-site geographic view when data is available.
+          </li>
+        </ul>
+      </section>
+
+      <section class="space-y-3">
+        <h2 class="text-lg font-semibold text-white uppercase tracking-wide" style="font-family: Oswald, system-ui, sans-serif;">Register &amp; federal basics</h2>
+        <ul class="list-disc pl-5 space-y-2 marker:text-white/40">
+          <li>
+            <a class="text-patriot-blue font-semibold underline hover:text-white" href="https://www.vote.gov/" rel="noopener noreferrer" target="_blank">Vote.gov</a>
+            — U.S. government hub to register and check rules for your state.
+          </li>
+          <li>
+            <a class="text-patriot-blue font-semibold underline hover:text-white" href="https://www.eac.gov/" rel="noopener noreferrer" target="_blank">U.S. Election Assistance Commission</a>
+            — federal resources on voting access and election administration.
+          </li>
+        </ul>
+      </section>
+
+      <section class="space-y-3">
+        <h2 class="text-lg font-semibold text-white uppercase tracking-wide" style="font-family: Oswald, system-ui, sans-serif;">Texas — official voter information</h2>
+        <ul class="list-disc pl-5 space-y-2 marker:text-white/40">
+          <li>
+            <a class="text-patriot-blue font-semibold underline hover:text-white" href="https://www.votetexas.gov/" rel="noopener noreferrer" target="_blank">VoteTexas.gov</a>
+            — Texas Secretary of State: registration, ID, key dates, and voter FAQs.
+          </li>
+          <li>
+            <a class="text-patriot-blue font-semibold underline hover:text-white" href="https://www.votetexas.gov/voting/" rel="noopener noreferrer" target="_blank">Voting in Texas</a>
+            — polling places, early voting, and how to cast a ballot (use county tools linked from the state site).
+          </li>
+          <li>
+            <a class="text-patriot-blue font-semibold underline hover:text-white" href="https://www.sos.texas.gov/elections/index.shtml" rel="noopener noreferrer" target="_blank">Texas SOS — Elections</a>
+            — election law references, calendars, and announcements from the state.
+          </li>
+        </ul>
+      </section>
+
+      <section class="space-y-3">
+        <h2 class="text-lg font-semibold text-white uppercase tracking-wide" style="font-family: Oswald, system-ui, sans-serif;">Candidates, races &amp; research</h2>
+        <ul class="list-disc pl-5 space-y-2 marker:text-white/40">
+          <li>
+            <a class="text-patriot-blue font-semibold underline hover:text-white" href="https://ballotpedia.org/" rel="noopener noreferrer" target="_blank">Ballotpedia</a>
+            — encyclopedic coverage of offices, elections, and ballot measures (third-party; verify with official sources).
+          </li>
+          <li>
+            <a class="text-patriot-blue font-semibold underline hover:text-white" href="https://www.lwv.org/voters" rel="noopener noreferrer" target="_blank">League of Women Voters — Voter resources</a>
+            — nonpartisan voter education and explainers.
+          </li>
+        </ul>
+      </section>
+
+      <section class="space-y-3">
+        <h2 class="text-lg font-semibold text-white uppercase tracking-wide" style="font-family: Oswald, system-ui, sans-serif;">Money in politics (transparency)</h2>
+        <ul class="list-disc pl-5 space-y-2 marker:text-white/40">
+          <li>
+            <a class="text-patriot-blue font-semibold underline hover:text-white" href="https://www.fec.gov/data/" rel="noopener noreferrer" target="_blank">Federal Election Commission — data</a>
+            — federal campaign finance filings and search tools.
+          </li>
+          <li>
+            <a class="text-patriot-blue font-semibold underline hover:text-white" href="https://www.opensecrets.org/" rel="noopener noreferrer" target="_blank">OpenSecrets</a>
+            — research on money in U.S. politics (nonprofit journalism).
+          </li>
+          <li>
+            <a class="text-patriot-blue font-semibold underline hover:text-white" href="https://www.ethics.state.tx.us/search/cf/" rel="noopener noreferrer" target="_blank">Texas Ethics Commission — campaign finance search</a>
+            — state-level reports for Texas offices (when filed).
+          </li>
+        </ul>
+      </section>
+
+      <p class="text-xs text-white/45 border-t border-white/10 pt-6">
+        Links open in a new tab where noted. {{ SITE_NAME }} is not responsible for third-party content, availability, or privacy practices.
+      </p>
+    </article>
+  </div>
+{% endblock %}

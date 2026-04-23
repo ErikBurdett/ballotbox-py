@@ -4,19 +4,23 @@ from datetime import date
 
 from django.conf import settings
 from django.core.paginator import Paginator
-from django.db.models import Count, Exists, Max, Min, OuterRef, Q, Subquery
+from django.db.models import Count, Exists, Max, Min, OuterRef, Prefetch, Q, Subquery
 from django.db.models.functions import ExtractYear
 from django.http import Http404
 from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
 
 from apps.geo.models import DistrictType, Jurisdiction, JurisdictionType
 from apps.media.models import VideoEmbed
 from apps.offices.models import OfficeBranch, OfficeLevel
 from apps.people.models import ContactMethod, ExternalLink, Party, Person, SocialLink
 
-from .models import Candidacy, CandidacyStatus, Race
+from .models import Candidacy, CandidacyStatus, Election, ElectionType, Race
 
 TEXAS_RACES_STATE = "TX"
+# Public runoff directory: include scheduled runoffs from this calendar date forward,
+# plus any runoff on or after "today" (covers late-2024 runoffs if the page is viewed before 2025).
+RUNOFF_DIRECTORY_START = date(2025, 1, 1)
 
 
 def _texas_races_filter() -> Q:
@@ -402,6 +406,58 @@ def races_list_texas(request):
             "filters": {"election_year": election_year, "q": q},
             "election_years": list(election_years),
             "race_quick_pick": race_quick_pick,
+        },
+    )
+
+
+def runoffs_texas(request):
+    """
+    Texas runoff elections (2025-01-01 onward, plus any runoff dated today or later),
+    and a directory of Texas jurisdictions that can host local contests.
+    """
+    today = timezone.now().date()
+    runoff_date_filter = Q(date__gte=RUNOFF_DIRECTORY_START) | Q(date__gte=today)
+
+    elections_qs = (
+        Election.objects.filter(
+            election_type=ElectionType.RUNOFF,
+            jurisdiction__state=TEXAS_RACES_STATE,
+        )
+        .filter(runoff_date_filter)
+        .select_related("jurisdiction")
+        .prefetch_related(
+            Prefetch(
+                "races",
+                queryset=Race.objects.select_related("office", "district").order_by("office__name", "id"),
+            )
+        )
+        .order_by("-date", "jurisdiction__name", "name")
+    )
+
+    elections_page = Paginator(elections_qs, 35).get_page(request.GET.get("page") or 1)
+
+    runoff_for_count = Q(
+        elections__election_type=ElectionType.RUNOFF,
+    ) & (Q(elections__date__gte=RUNOFF_DIRECTORY_START) | Q(elections__date__gte=today))
+
+    jurisdictions_qs = (
+        Jurisdiction.objects.filter(state=TEXAS_RACES_STATE)
+        .exclude(jurisdiction_type=JurisdictionType.STATE)
+        .annotate(runoff_count=Count("elections", filter=runoff_for_count, distinct=True))
+        .order_by("jurisdiction_type", "name", "id")
+    )
+
+    jurisdictions_page = Paginator(jurisdictions_qs, 80).get_page(request.GET.get("jx_page") or 1)
+
+    return render(
+        request,
+        "elections/runoffs_texas.html",
+        {
+            "elections_page": elections_page,
+            "jurisdictions_page": jurisdictions_page,
+            "today": today,
+            "runoff_directory_start": RUNOFF_DIRECTORY_START,
+            "canonical_url": request.build_absolute_uri(),
         },
     )
 

@@ -44,14 +44,23 @@ class Command(BaseCommand):
                 )
             )
         else:
-            call_command(
-                "sync_ballotpedia_geographic",
-                max_requests=160,
-                max_election_dates=14,
-                max_tx_calendar_pages=10,
-                tx_local_state_pages=1,
-                skip_if_fetched_days=1,
-            )
+            geo_kwargs: dict = {
+                "max_requests": int(getattr(settings, "BALLOTPEDIA_GEO_MAX_REQUESTS", 160)),
+                "max_election_dates": int(getattr(settings, "BALLOTPEDIA_GEO_MAX_ELECTION_DATES", 14)),
+                "max_tx_calendar_pages": int(getattr(settings, "BALLOTPEDIA_GEO_MAX_TX_CALENDAR_PAGES", 10)),
+                "tx_local_state_pages": int(getattr(settings, "BALLOTPEDIA_GEO_TX_LOCAL_STATE_PAGES", 1)),
+                "skip_if_fetched_days": int(getattr(settings, "BALLOTPEDIA_GEO_SKIP_IF_FETCHED_DAYS", 1)),
+            }
+            geo_preset = (getattr(settings, "BALLOTPEDIA_GEO_PRESET", "") or "").strip().lower()
+            if geo_preset == "panhandle":
+                geo_kwargs["preset"] = "panhandle"
+            elif geo_preset == "panhandle_north":
+                geo_kwargs["preset"] = "panhandle_north"
+            if bool(getattr(settings, "BALLOTPEDIA_GEO_WITH_OFFICEHOLDERS", False)):
+                geo_kwargs["with_officeholders"] = True
+            if bool(getattr(settings, "BALLOTPEDIA_GEO_GEOGRAPHIC_ONLY", False)):
+                geo_kwargs["geographic_only"] = True
+            call_command("sync_ballotpedia_geographic", **geo_kwargs)
             self.stdout.write(self.style.SUCCESS("Ballotpedia geographic sync finished."))
 
         # 3) Optional legacy Democracy Works

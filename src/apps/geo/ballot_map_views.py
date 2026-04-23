@@ -4,7 +4,9 @@ import json
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
+from django.conf import settings
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render
 from django.templatetags.static import static
@@ -33,15 +35,42 @@ def _in_texas_bbox(lon: float, lat: float) -> bool:
     return _TX_LON[0] <= lon <= _TX_LON[1] and _TX_LAT[0] <= lat <= _TX_LAT[1]
 
 
+def _legislative_geojson_urls() -> dict[str, str | bool]:
+    """
+    URLs for bundled map overlays (same pattern as tx-counties.geojson).
+
+    Files are produced by ``manage.py fetch_texas_legislative_geojson`` (legislative,
+    merged school districts, and TCEQ water districts) so the map does not call remote APIs on each view.
+    """
+    geo_dir = Path(settings.BASE_DIR) / "static" / "geo"
+
+    def _u(filename: str) -> str:
+        if (geo_dir / filename).is_file():
+            return static(f"geo/{filename}")
+        return ""
+
+    cd = _u("tx-cd119.geojson")
+    sdu = _u("tx-sldu.geojson")
+    sdl = _u("tx-sldl.geojson")
+    school = _u("tx-school-districts.geojson")
+    water = _u("tx-water-districts.geojson")
+    return {
+        "tx_cd119_geojson_url": cd,
+        "tx_sldu_geojson_url": sdu,
+        "tx_sldl_geojson_url": sdl,
+        "tx_school_geojson_url": school,
+        "tx_water_geojson_url": water,
+        "legislative_geo_bundled": bool(cd and sdu and sdl),
+    }
+
+
 @require_GET
 def texas_ballot_map(request):
-    return render(
-        request,
-        "geo/texas_ballot_map.html",
-        {
-            "tx_counties_geojson_url": static("geo/tx-counties.geojson"),
-        },
-    )
+    ctx = {
+        "tx_counties_geojson_url": static("geo/tx-counties.geojson"),
+        **_legislative_geojson_urls(),
+    }
+    return render(request, "geo/texas_ballot_map.html", ctx)
 
 
 @require_GET
