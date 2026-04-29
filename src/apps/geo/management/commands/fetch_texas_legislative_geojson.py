@@ -12,8 +12,13 @@ from apps.geo.texas_ballot_map_geo_fetch import fetch_all_ballot_map_geo_bundles
 class Command(BaseCommand):
     help = (
         "Download Texas ballot map GeoJSON bundles into static/geo/: Census TIGERweb legislative (House/Senate), "
+        "Texas Legislative Council SBOE Plan E2106 (tx-sboe-plane2106.geojson from Capitol Data zip), "
         "Census School (unified + secondary + elementary merged as tx-school-districts.geojson), "
-        "and TCEQ water districts (tx-water-districts.geojson). "
+        "TCEQ water districts (tx-water-districts.geojson), "
+        "Census TIGERweb incorporated places + CDPs + 2020 urban areas (tx-places-*.geojson, tx-urban-areas.geojson), "
+        "plus — when static/geo/tx-counties.geojson is present — "
+        "Texas Courts of Appeals polygons (tx-coa-districts.geojson, Gov't Code §22.201 county dissolve) and "
+        "Court of Criminal Appeals statewide (tx-cca-statewide.geojson). "
         "The map loads these like tx-counties.geojson — instant toggles. Large outputs are gitignored by default."
     )
 
@@ -28,7 +33,7 @@ class Command(BaseCommand):
         dry = bool(options.get("dry_run"))
         geo_dir = Path(settings.BASE_DIR) / "static" / "geo"
 
-        self.stdout.write("Fetching legislative (Census), school (Census), and water (TCEQ)…")
+        self.stdout.write("Fetching legislative (Census), school (Census), water (TCEQ), and appellate (county dissolve)…")
         bundles = fetch_all_ballot_map_geo_bundles()
 
         for fname, label, data in bundles:

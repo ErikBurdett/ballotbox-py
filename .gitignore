@@ -14,5 +14,9 @@ db_data/
 src/static/geo/tx-cd119.geojson
 src/static/geo/tx-sldu.geojson
 src/static/geo/tx-sldl.geojson
+src/static/geo/tx-sboe-plane2106.geojson
 src/static/geo/tx-school-districts.geojson
 src/static/geo/tx-water-districts.geojson
+src/static/geo/tx-places-incorporated.geojson
+src/static/geo/tx-places-cdp.geojson
+src/static/geo/tx-urban-areas.geojson

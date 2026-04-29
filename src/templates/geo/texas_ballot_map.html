@@ -9,7 +9,7 @@
       <div class="surface p-5 sm:p-6 text-center sm:text-left">
         <h1 class="text-2xl font-semibold">Texas ballot map</h1>
         <p class="mt-2 text-sm text-white/70 max-w-3xl mx-auto sm:mx-0">
-          Hover the map for feature names and attributes. Turn on one or more <strong class="text-white/90">map layers</strong> under the map to stack county boundaries with U.S. House and Texas legislative districts (bundled GeoJSON from Census TIGERweb — similar idea to layered plans in tools like
+          Hover the map for feature names and attributes. Turn on one or more <strong class="text-white/90">map layers</strong> under the map to stack county boundaries with U.S. House, Texas Legislature, <strong class="text-white/90">Courts of Appeals</strong> (distinct colors per appellate district), <strong class="text-white/90">Court of Criminal Appeals</strong> (statewide), school districts, and water districts (bundled GeoJSON from Census / TCEQ / local dissolve — similar idea to layered plans in tools like
           <a class="text-white underline decoration-white/30" href="https://davesredistricting.org/maps#viewmap::1ea6b752-99fa-4bbb-8c4e-3110234ac5e6" rel="noopener noreferrer" target="_blank">Dave&rsquo;s Redistricting</a>).
           Click anywhere in Texas (or search an address) to load <strong class="text-white/90">county-level</strong> offices, races, and officials from this database.
           Address search uses the
@@ -17,7 +17,36 @@
         </p>
       </div>
 
-      <div class="mt-6 w-full max-w-6xl mx-auto space-y-4">
+        <div class="mt-6 w-full max-w-6xl mx-auto space-y-4">
+        <div class="surface p-4 sm:p-5 max-w-6xl mx-auto w-full">
+          <div class="flex flex-col lg:flex-row lg:flex-wrap gap-4 lg:items-end text-sm text-white/80">
+            <div class="flex-1 min-w-[200px]">
+              <label for="map-basemap" class="block text-xs font-semibold text-white/70 mb-1">Basemap</label>
+              <select id="map-basemap" class="input w-full max-w-xs">
+                <option value="demo" selected>MapLibre demo (light)</option>
+                <option value="positron">Carto Positron (light)</option>
+                <option value="dark">Carto Dark Matter</option>
+              </select>
+            </div>
+            <div class="flex-1 min-w-[220px] lg:max-w-md">
+              <label for="map-overlay-opacity" class="block text-xs font-semibold text-white/70 mb-1">
+                Overlay fill strength <span id="map-overlay-opacity-pct" class="font-mono text-white/55">100%</span>
+              </label>
+              <input
+                id="map-overlay-opacity"
+                type="range"
+                min="35"
+                max="140"
+                value="100"
+                class="w-full accent-patriot-blue"
+              />
+            </div>
+            <label class="inline-flex items-center gap-2 cursor-pointer select-none shrink-0 pt-1 lg:pt-0">
+              <input type="checkbox" id="map-show-labels" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+              <span class="text-xs text-white/75">Show labels (counties, SBOE, places, urban, districts when zoomed in)</span>
+            </label>
+          </div>
+        </div>
         <div class="surface p-4 sm:p-5 max-w-2xl mx-auto w-full">
           <form id="ballot-geocode-form" class="flex flex-col sm:flex-row gap-3 sm:items-end justify-center" action="#" onsubmit="return false;">
             <div class="flex-1 min-w-0 w-full">
@@ -46,6 +75,12 @@
               data-sldl-url="{{ tx_sldl_geojson_url|default:'' }}"
               data-school-url="{{ tx_school_geojson_url|default:'' }}"
               data-water-url="{{ tx_water_geojson_url|default:'' }}"
+              data-coa-url="{{ tx_coa_geojson_url|default:'' }}"
+              data-cca-url="{{ tx_cca_geojson_url|default:'' }}"
+              data-sboe-url="{{ tx_sboe_geojson_url|default:'' }}"
+              data-places-inc-url="{{ tx_places_incorporated_geojson_url|default:'' }}"
+              data-places-cdp-url="{{ tx_places_cdp_geojson_url|default:'' }}"
+              data-urban-url="{{ tx_urban_areas_geojson_url|default:'' }}"
             ></div>
             <div
               id="county-hover-tooltip"
@@ -60,11 +95,22 @@
             <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Legislative/MapServer" rel="noopener noreferrer" target="_blank">TIGERweb Legislative</a>;
             school districts:
             <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/School/MapServer" rel="noopener noreferrer" target="_blank">TIGERweb School</a>;
-            water districts:
+            water:
             <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://gisweb.tceq.texas.gov/arcgis/rest/services/Public/WaterDistricts/MapServer" rel="noopener noreferrer" target="_blank">TCEQ</a>.
+            <strong class="text-white/80">Courts of Appeals</strong> / <strong class="text-white/80">Court of Criminal Appeals</strong>: counties dissolved per
+            <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://statutes.capitol.texas.gov/Docs/GV/htm/GV.22.htm#22.201" rel="noopener noreferrer" target="_blank">Tex. Gov&rsquo;t Code &sect;22.201</a>
+            (CCA is statewide final criminal review).
             Not a substitute for official election maps. Re-run
             <code class="font-mono text-white/50">fetch_texas_legislative_geojson</code> if bundled files predate changes.
-            Basemap: MapLibre demo tiles.
+            Extra basemaps use
+            <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://carto.com/attributions" rel="noopener noreferrer" target="_blank">CARTO</a>.
+            SBOE boundaries: Texas Capitol Data
+            <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://data.capitol.texas.gov/dataset/plane2106" rel="noopener noreferrer" target="_blank">PLAN E2106</a>
+            (shapefile → local GeoJSON). Places / CDPs / urban areas: Census TIGERweb
+            <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer" rel="noopener noreferrer" target="_blank">Places</a>
+            and
+            <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Urban/MapServer" rel="noopener noreferrer" target="_blank">Urban</a>.
+            Layer combinations can be shared via the URL hash (updated when you toggle layers).
           </p>
         </div>
 
@@ -89,12 +135,36 @@
                 <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-teal-400/90 border border-white/30"></span> Texas House</span>
               </label>
               <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-sboe" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-lime-400/90 border border-white/30"></span> SBOE (Plan E2106)</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-coa" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-gradient-to-br from-fuchsia-400 to-cyan-400 border border-white/30"></span> Courts of Appeals</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-cca" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-rose-700/95 border border-white/30"></span> Court of Criminal Appeals</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
                 <input type="checkbox" id="layer-tx-school" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
                 <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-rose-400/90 border border-white/30"></span> School districts</span>
               </label>
               <label class="inline-flex items-center gap-2 cursor-pointer select-none">
                 <input type="checkbox" id="layer-tx-water" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
                 <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-sky-500/90 border border-white/30"></span> Water districts</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-places-inc" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-indigo-400/90 border border-white/30"></span> Incorporated places</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-places-cdp" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-slate-400/90 border border-white/30"></span> Census CDPs</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-urban" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-orange-400/90 border border-white/30"></span> Urban areas (2020)</span>
               </label>
             </div>
             {% if not legislative_geo_bundled %}
@@ -103,7 +173,10 @@
                 <code class="font-mono text-white/80">python manage.py fetch_texas_legislative_geojson</code>
                 (from <code class="font-mono text-white/80">/app/src</code> in Docker), then reload — toggles become instant (no live Census/TCEQ calls). That command writes
                 <code class="font-mono text-white/70">tx-cd119</code>, <code class="font-mono text-white/70">tx-sldu</code>, <code class="font-mono text-white/70">tx-sldl</code>,
-                <code class="font-mono text-white/70">tx-school-districts</code>, and <code class="font-mono text-white/70">tx-water-districts</code>.
+                <code class="font-mono text-white/70">tx-sboe-plane2106</code>, <code class="font-mono text-white/70">tx-school-districts</code>,
+                <code class="font-mono text-white/70">tx-water-districts</code>, <code class="font-mono text-white/70">tx-places-incorporated</code>,
+                <code class="font-mono text-white/70">tx-places-cdp</code>, <code class="font-mono text-white/70">tx-urban-areas</code>,
+                <code class="font-mono text-white/70">tx-coa-districts</code>, and <code class="font-mono text-white/70">tx-cca-statewide</code>.
                 Re-run after updates to refresh attributes (e.g. POP100 and full field lists in tooltips).
               </p>
             {% endif %}
@@ -167,11 +240,175 @@
       var geocodeUrl = el.dataset.geocodeUrl;
       var geojsonUrl = el.dataset.geojsonUrl;
 
+      var BASEMAPS = {
+        demo: {
+          url: "https://demotiles.maplibre.org/style.json",
+          labelFonts: ["Open Sans Semibold"],
+        },
+        positron: {
+          url: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+          labelFonts: ["Montserrat Medium", "Open Sans Regular", "Noto Sans Regular"],
+        },
+        dark: {
+          url: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+          labelFonts: ["Montserrat Medium", "Open Sans Regular", "Noto Sans Regular"],
+        },
+      };
+
+      var HASH_TO_ID = {
+        cd: "layer-tx-cd119",
+        su: "layer-tx-sldu",
+        sl: "layer-tx-sldl",
+        sb: "layer-tx-sboe",
+        oa: "layer-tx-coa",
+        cc: "layer-tx-cca",
+        sc: "layer-tx-school",
+        wa: "layer-tx-water",
+        pi: "layer-tx-places-inc",
+        pc: "layer-tx-places-cdp",
+        ur: "layer-tx-urban",
+      };
+
+      var basemapKey = "demo";
+
+      function readPrefsFromLocationHash() {
+        var raw = (location.hash || "").replace(/^#/, "");
+        if (!raw) return;
+        raw.split("&").forEach(function (segment) {
+          var eq = segment.indexOf("=");
+          if (eq < 0) return;
+          var k = segment.slice(0, eq);
+          var v = decodeURIComponent(segment.slice(eq + 1) || "");
+          if (k === "b" && BASEMAPS[v]) basemapKey = v;
+          if (k === "l") {
+            var want = {};
+            v.split(",").forEach(function (c) {
+              if (c) want[c] = true;
+            });
+            Object.keys(HASH_TO_ID).forEach(function (code) {
+              var node = document.getElementById(HASH_TO_ID[code]);
+              if (!node || node.disabled) return;
+              node.checked = !!want[code];
+            });
+          }
+        });
+      }
+
+      readPrefsFromLocationHash();
+
+      var basemapSelect = document.getElementById("map-basemap");
+      if (basemapSelect) basemapSelect.value = basemapKey;
+
+      function labelFontStack() {
+        var b = BASEMAPS[basemapKey] || BASEMAPS.demo;
+        return b.labelFonts;
+      }
+
+      function pushLocationHashFromUi() {
+        if (!history.replaceState) return;
+        var codes = [];
+        Object.keys(HASH_TO_ID).forEach(function (code) {
+          var elc = document.getElementById(HASH_TO_ID[code]);
+          if (elc && !elc.disabled && elc.checked) codes.push(code);
+        });
+        codes.sort();
+        var parts = ["l=" + codes.join(",")];
+        if (basemapKey !== "demo") parts.push("b=" + encodeURIComponent(basemapKey));
+        history.replaceState(null, "", "#" + parts.join("&"));
+      }
+
+      var BASE_COUNTY_FILL_ON = 0.08;
+      var BASE_COUNTY_FILL_OFF = 0.001;
+      var COA_FILL_BASE = 0.078;
+      var CCA_FILL_BASE = 0.055;
+
+      function overlayStrengthFactor() {
+        var rng = document.getElementById("map-overlay-opacity");
+        var v = rng ? parseInt(rng.value, 10) : 100;
+        if (isNaN(v)) v = 100;
+        return v / 100;
+      }
+
+      function updateOverlayStrengthLabel() {
+        var pct = document.getElementById("map-overlay-opacity-pct");
+        var rng = document.getElementById("map-overlay-opacity");
+        if (pct && rng) pct.textContent = rng.value + "%";
+      }
+
+      function applyAllOverlayFillOpacities() {
+        if (!map || !map.getLayer("tx-counties-fill")) return;
+        var f = overlayStrengthFactor();
+        var countyCb = document.getElementById("layer-tx-counties");
+        var countyOn = !!(countyCb && countyCb.checked);
+        map.setPaintProperty(
+          "tx-counties-fill",
+          "fill-opacity",
+          (countyOn ? BASE_COUNTY_FILL_ON : BASE_COUNTY_FILL_OFF) * f,
+        );
+        Object.keys(tigerSpecs).forEach(function (key) {
+          var sp = tigerSpecs[key];
+          if (map.getLayer(sp.fillId)) {
+            map.setPaintProperty(sp.fillId, "fill-opacity", sp.fillOpacity * f);
+          }
+        });
+        if (map.getLayer("tx-coa-fill")) {
+          map.setPaintProperty("tx-coa-fill", "fill-opacity", COA_FILL_BASE * f);
+        }
+        if (map.getLayer("tx-cca-fill")) {
+          map.setPaintProperty("tx-cca-fill", "fill-opacity", CCA_FILL_BASE * f);
+        }
+      }
+
+      function textFieldExprFromSpec(spec) {
+        if (spec.labelTextCoalesce && spec.labelTextCoalesce.length) {
+          var ch = ["coalesce"];
+          for (var i = 0; i < spec.labelTextCoalesce.length; i++) {
+            ch.push(["get", spec.labelTextCoalesce[i]]);
+          }
+          ch.push("");
+          return ch;
+        }
+        return ["coalesce", ["get", spec.labelTextProperty || "NAME"], ""];
+      }
+
+      function labelsGloballyOn() {
+        var lg = document.getElementById("map-show-labels");
+        return !!(lg && lg.checked);
+      }
+
+      function syncLabelLayerVisibility(spec, overlayVisible) {
+        if (!map || typeof map.getLayer !== "function" || !spec || !spec.labelLayerId) return;
+        if (!map.getLayer(spec.labelLayerId)) return;
+        var show = !!(overlayVisible && labelsGloballyOn());
+        map.setLayoutProperty(spec.labelLayerId, "visibility", show ? "visible" : "none");
+      }
+
+      function applyAllLabelVisibility() {
+        if (!map || typeof map.getLayer !== "function" || !map.getLayer("tx-counties-fill")) return;
+        var cCo = document.getElementById("layer-tx-counties");
+        if (map.getLayer("tx-counties-label")) {
+          map.setLayoutProperty(
+            "tx-counties-label",
+            "visibility",
+            labelsGloballyOn() && cCo && cCo.checked ? "visible" : "none",
+          );
+        }
+        Object.keys(tigerSpecs).forEach(function (key) {
+          var sp = tigerSpecs[key];
+          var cb = document.getElementById(key);
+          if (!sp.labelLayerId) return;
+          syncLabelLayerVisibility(sp, !!(cb && cb.checked));
+        });
+      }
+
       var tigerSpecs = {
         "layer-tx-cd119": {
           sourceId: "tx-cd119",
           fillId: "tx-cd119-fill",
           lineId: "tx-cd119-line",
+          labelLayerId: "tx-cd119-label",
+          labelTextCoalesce: ["NAMELSAD", "NAME"],
+          labelMinZoom: 6,
           dataUrlKey: "cd119Url",
           fillColor: "#a855f7",
           fillOpacity: 0.075,
@@ -182,6 +419,9 @@
           sourceId: "tx-sldu",
           fillId: "tx-sldu-fill",
           lineId: "tx-sldu-line",
+          labelLayerId: "tx-sldu-label",
+          labelTextCoalesce: ["NAMELSAD", "NAME"],
+          labelMinZoom: 6,
           dataUrlKey: "slduUrl",
           fillColor: "#f59e0b",
           fillOpacity: 0.07,
@@ -192,16 +432,35 @@
           sourceId: "tx-sldl",
           fillId: "tx-sldl-fill",
           lineId: "tx-sldl-line",
+          labelLayerId: "tx-sldl-label",
+          labelTextCoalesce: ["NAMELSAD", "NAME"],
+          labelMinZoom: 7,
           dataUrlKey: "sldlUrl",
           fillColor: "#2dd4bf",
           fillOpacity: 0.065,
           lineColor: "rgba(153, 246, 228, 0.78)",
           lineWidth: 1.0,
         },
+        "layer-tx-sboe": {
+          sourceId: "tx-sboe",
+          fillId: "tx-sboe-fill",
+          lineId: "tx-sboe-line",
+          labelLayerId: "tx-sboe-label",
+          labelTextCoalesce: ["District", "DISTRICT", "NAME", "NAMELSAD"],
+          labelMinZoom: 5,
+          dataUrlKey: "sboeUrl",
+          fillColor: "#84cc16",
+          fillOpacity: 0.068,
+          lineColor: "rgba(190, 242, 100, 0.8)",
+          lineWidth: 1.08,
+        },
         "layer-tx-school": {
           sourceId: "tx-school",
           fillId: "tx-school-fill",
           lineId: "tx-school-line",
+          labelLayerId: "tx-school-label",
+          labelTextCoalesce: ["NAMELSAD", "NAME"],
+          labelMinZoom: 8,
           dataUrlKey: "schoolUrl",
           fillColor: "#fb7185",
           fillOpacity: 0.065,
@@ -212,17 +471,126 @@
           sourceId: "tx-water",
           fillId: "tx-water-fill",
           lineId: "tx-water-line",
+          labelLayerId: "tx-water-label",
+          labelTextCoalesce: ["NAMELSAD", "NAME", "DISTRICT"],
+          labelMinZoom: 9,
           dataUrlKey: "waterUrl",
           fillColor: "#0ea5e9",
           fillOpacity: 0.065,
           lineColor: "rgba(125, 211, 252, 0.78)",
           lineWidth: 1.0,
         },
+        "layer-tx-places-inc": {
+          sourceId: "tx-places-inc",
+          fillId: "tx-places-inc-fill",
+          lineId: "tx-places-inc-line",
+          labelLayerId: "tx-places-inc-label",
+          labelTextCoalesce: ["NAMELSAD", "NAME"],
+          labelMinZoom: 8,
+          dataUrlKey: "placesIncUrl",
+          fillColor: "#818cf8",
+          fillOpacity: 0.06,
+          lineColor: "rgba(199, 210, 254, 0.78)",
+          lineWidth: 1.0,
+        },
+        "layer-tx-places-cdp": {
+          sourceId: "tx-places-cdp",
+          fillId: "tx-places-cdp-fill",
+          lineId: "tx-places-cdp-line",
+          labelLayerId: "tx-places-cdp-label",
+          labelTextCoalesce: ["NAMELSAD", "NAME"],
+          labelMinZoom: 8,
+          dataUrlKey: "placesCdpUrl",
+          fillColor: "#94a3b8",
+          fillOpacity: 0.058,
+          lineColor: "rgba(226, 232, 240, 0.75)",
+          lineWidth: 0.95,
+        },
+        "layer-tx-urban": {
+          sourceId: "tx-urban",
+          fillId: "tx-urban-fill",
+          lineId: "tx-urban-line",
+          labelLayerId: "tx-urban-label",
+          labelTextCoalesce: ["NAME", "NAMELSAD"],
+          labelMinZoom: 5,
+          dataUrlKey: "urbanUrl",
+          fillColor: "#fb923c",
+          fillOpacity: 0.045,
+          lineColor: "rgba(253, 186, 116, 0.72)",
+          lineWidth: 0.85,
+        },
       };
+
+      Object.keys(tigerSpecs).forEach(function (key) {
+        var sp = tigerSpecs[key];
+        var raw = el.dataset[sp.dataUrlKey];
+        var url = raw && String(raw).trim() ? String(raw).trim() : "";
+        var cb = document.getElementById(key);
+        if (cb && !url) {
+          cb.disabled = true;
+          cb.checked = false;
+        }
+      });
+      (function () {
+        var uCoa = (el.dataset.coaUrl || "").trim();
+        var cCoa = document.getElementById("layer-tx-coa");
+        if (cCoa && !uCoa) {
+          cCoa.disabled = true;
+          cCoa.checked = false;
+        }
+        var uCca = (el.dataset.ccaUrl || "").trim();
+        var cCca = document.getElementById("layer-tx-cca");
+        if (cCca && !uCca) {
+          cCca.disabled = true;
+          cCca.checked = false;
+        }
+      })();
+
+      var coaDistIds = ["1-14", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "15"];
+      var coaFillColors = [
+        "#e11d48",
+        "#c026d3",
+        "#7c3aed",
+        "#4f46e5",
+        "#2563eb",
+        "#0d9488",
+        "#059669",
+        "#ca8a04",
+        "#ea580c",
+        "#be123c",
+        "#db2777",
+        "#0891b2",
+        "#0284c7",
+        "#475569",
+      ];
+      var coaLineColors = [
+        "rgba(225,29,72,0.82)",
+        "rgba(192,38,211,0.82)",
+        "rgba(124,58,237,0.82)",
+        "rgba(79,70,229,0.82)",
+        "rgba(37,99,235,0.82)",
+        "rgba(13,148,136,0.82)",
+        "rgba(5,150,105,0.82)",
+        "rgba(202,138,4,0.82)",
+        "rgba(234,88,12,0.82)",
+        "rgba(190,18,60,0.82)",
+        "rgba(219,39,119,0.82)",
+        "rgba(8,145,178,0.82)",
+        "rgba(2,132,199,0.82)",
+        "rgba(71,85,105,0.82)",
+      ];
+      function paintMatchGet(prop, ids, vals, fallback) {
+        var expr = ["match", ["get", prop]];
+        for (var i = 0; i < ids.length; i++) {
+          expr.push(ids[i], vals[i]);
+        }
+        expr.push(fallback);
+        return expr;
+      }
 
       var map = new maplibregl.Map({
         container: "ballot-map",
-        style: "https://demotiles.maplibre.org/style.json",
+        style: BASEMAPS[basemapKey].url,
         bounds: [
           [-106.65, 25.84],
           [-93.51, 36.5],
@@ -331,6 +699,28 @@
         parts.push(
           chip("Texas House", "bg-teal-400/90", !!(cSl && cSl.checked && !cSl.disabled), !!(cSl && cSl.disabled)),
         );
+        var cSb = document.getElementById("layer-tx-sboe");
+        parts.push(
+          chip("SBOE (E2106)", "bg-lime-400/90", !!(cSb && cSb.checked && !cSb.disabled), !!(cSb && cSb.disabled)),
+        );
+        var cCoa = document.getElementById("layer-tx-coa");
+        var cCca = document.getElementById("layer-tx-cca");
+        parts.push(
+          chip(
+            "Courts of Appeals",
+            "bg-gradient-to-br from-fuchsia-500/90 to-cyan-400/90",
+            !!(cCoa && cCoa.checked && !cCoa.disabled),
+            !!(cCoa && cCoa.disabled),
+          ),
+        );
+        parts.push(
+          chip(
+            "Court of Criminal Appeals",
+            "bg-rose-700/90",
+            !!(cCca && cCca.checked && !cCca.disabled),
+            !!(cCca && cCca.disabled),
+          ),
+        );
         var cSc = document.getElementById("layer-tx-school");
         var cWa = document.getElementById("layer-tx-water");
         parts.push(
@@ -343,6 +733,18 @@
         );
         parts.push(
           chip("Water districts", "bg-sky-500/90", !!(cWa && cWa.checked && !cWa.disabled), !!(cWa && cWa.disabled)),
+        );
+        var cPi = document.getElementById("layer-tx-places-inc");
+        var cPc = document.getElementById("layer-tx-places-cdp");
+        var cUr = document.getElementById("layer-tx-urban");
+        parts.push(
+          chip("Incorporated places", "bg-indigo-400/90", !!(cPi && cPi.checked && !cPi.disabled), !!(cPi && cPi.disabled)),
+        );
+        parts.push(
+          chip("Census CDPs", "bg-slate-400/90", !!(cPc && cPc.checked && !cPc.disabled), !!(cPc && cPc.disabled)),
+        );
+        parts.push(
+          chip("Urban areas (2020)", "bg-orange-400/90", !!(cUr && cUr.checked && !cUr.disabled), !!(cUr && cUr.disabled)),
         );
         activeLayersEl.innerHTML = parts.join("");
       }
@@ -430,13 +832,32 @@
         if (layerId === "tx-cd119-fill") return "U.S. House";
         if (layerId === "tx-sldu-fill") return "Texas Senate";
         if (layerId === "tx-sldl-fill") return "Texas House";
+        if (layerId === "tx-sboe-fill") return "State Board of Education (Plan E2106)";
+        if (layerId === "tx-coa-fill") return "Court of Appeals";
+        if (layerId === "tx-cca-fill") return "Court of Criminal Appeals";
         if (layerId === "tx-school-fill") return "School district (Census)";
         if (layerId === "tx-water-fill") return "Water district (TCEQ)";
+        if (layerId === "tx-places-inc-fill") return "Incorporated place (Census)";
+        if (layerId === "tx-places-cdp-fill") return "Census Designated Place";
+        if (layerId === "tx-urban-fill") return "Urban area (Census 2020)";
         return "District";
       }
 
       function districtDisplayName(props) {
-        var keys = ["NAME", "DISTRICT", "DISTRICT_NM", "DIST_NAME", "DISTRICT_NAME", "LABEL", "BASENAME", "GNIS_NAME"];
+        var keys = [
+          "COA_LABEL",
+          "CCA",
+          "NAME",
+          "District",
+          "DISTRICT",
+          "DISTRICT_NM",
+          "DIST_NAME",
+          "DISTRICT_NAME",
+          "LABEL",
+          "BASENAME",
+          "GNIS_NAME",
+          "NAMELSAD",
+        ];
         for (var i = 0; i < keys.length; i++) {
           var raw = props[keys[i]];
           var v = raw == null ? "" : String(raw).trim();
@@ -448,6 +869,13 @@
       function layerAttrsCaption(layerId) {
         if (layerId === "tx-water-fill") return "All attributes (TCEQ)";
         if (layerId === "tx-school-fill") return "All attributes (Census School)";
+        if (layerId === "tx-coa-fill") return "All attributes (ballot map: §22.201 dissolve)";
+        if (layerId === "tx-cca-fill") return "All attributes (ballot map: statewide CCA)";
+        if (layerId === "tx-sboe-fill") return "All attributes (Texas Capitol Data PLAN E2106)";
+        if (layerId === "tx-places-inc-fill" || layerId === "tx-places-cdp-fill") {
+          return "All attributes (Census TIGERweb Places)";
+        }
+        if (layerId === "tx-urban-fill") return "All attributes (Census TIGERweb Urban 2020)";
         return "All attributes (Census TIGERweb)";
       }
 
@@ -477,22 +905,27 @@
         }
         Object.keys(tigerSpecs).forEach(function (key) {
           var sp = tigerSpecs[key];
+          if (!map.getLayer(sp.fillId)) return;
           var elCb = document.getElementById(key);
-          if (!elCb || !elCb.checked || !map.getLayer(sp.fillId)) return;
+          if (!elCb || !elCb.checked) return;
           ids.push(sp.fillId);
         });
+        var cCoa = document.getElementById("layer-tx-coa");
+        if (cCoa && cCoa.checked && map.getLayer("tx-coa-fill")) ids.push("tx-coa-fill");
+        var cCca = document.getElementById("layer-tx-cca");
+        if (cCca && cCca.checked && map.getLayer("tx-cca-fill")) ids.push("tx-cca-fill");
         return ids;
       }
 
       function setCountyVisibility(visible) {
         if (!map.getLayer("tx-counties-fill")) return;
         if (visible) {
-          map.setPaintProperty("tx-counties-fill", "fill-opacity", 0.08);
           map.setLayoutProperty("tx-counties-line", "visibility", "visible");
         } else {
-          map.setPaintProperty("tx-counties-fill", "fill-opacity", 0.001);
           map.setLayoutProperty("tx-counties-line", "visibility", "none");
         }
+        applyAllOverlayFillOpacities();
+        applyAllLabelVisibility();
       }
 
       function addBundledLegislativeLayers(spec, url) {
@@ -518,6 +951,28 @@
             "line-width": spec.lineWidth,
           },
         });
+        if (spec.labelLayerId) {
+          var minz = spec.labelMinZoom == null ? 6 : spec.labelMinZoom;
+          map.addLayer({
+            id: spec.labelLayerId,
+            type: "symbol",
+            source: spec.sourceId,
+            minzoom: minz,
+            layout: {
+              visibility: "none",
+              "text-field": textFieldExprFromSpec(spec),
+              "text-size": 11,
+              "text-font": labelFontStack(),
+              "text-allow-overlap": false,
+              "text-ignore-placement": false,
+            },
+            paint: {
+              "text-color": "rgba(248, 250, 252, 0.92)",
+              "text-halo-color": "rgba(15, 23, 42, 0.9)",
+              "text-halo-width": 1.2,
+            },
+          });
+        }
       }
 
       function setTigerVisibility(spec, visible) {
@@ -525,18 +980,64 @@
         var vis = visible ? "visible" : "none";
         map.setLayoutProperty(spec.fillId, "visibility", vis);
         map.setLayoutProperty(spec.lineId, "visibility", vis);
+        syncLabelLayerVisibility(spec, visible);
       }
 
-      function wireLegislativeCheckbox(checkboxId) {
-        var spec = tigerSpecs[checkboxId];
-        if (!spec) return;
-        var cb = document.getElementById(checkboxId);
-        if (!cb) return;
-        cb.addEventListener("change", function () {
-          if (!map.getLayer(spec.fillId)) return;
-          setTigerVisibility(spec, cb.checked);
-          refreshActiveLayersSummary();
+      function addCoaAppealsLayers(url) {
+        if (map.getSource("tx-coa")) return;
+        map.addSource("tx-coa", { type: "geojson", data: url });
+        map.addLayer({
+          id: "tx-coa-fill",
+          type: "fill",
+          source: "tx-coa",
+          layout: { visibility: "none" },
+          paint: {
+            "fill-color": paintMatchGet("COA_DIST", coaDistIds, coaFillColors, "#64748b"),
+            "fill-opacity": 0.078,
+          },
         });
+        map.addLayer({
+          id: "tx-coa-line",
+          type: "line",
+          source: "tx-coa",
+          layout: { visibility: "none" },
+          paint: {
+            "line-color": paintMatchGet("COA_DIST", coaDistIds, coaLineColors, "rgba(100,116,139,0.85)"),
+            "line-width": 1.08,
+          },
+        });
+      }
+
+      function addCriminalAppealsLayers(url) {
+        if (map.getSource("tx-cca")) return;
+        map.addSource("tx-cca", { type: "geojson", data: url });
+        map.addLayer({
+          id: "tx-cca-fill",
+          type: "fill",
+          source: "tx-cca",
+          layout: { visibility: "none" },
+          paint: {
+            "fill-color": "#9f1239",
+            "fill-opacity": 0.055,
+          },
+        });
+        map.addLayer({
+          id: "tx-cca-line",
+          type: "line",
+          source: "tx-cca",
+          layout: { visibility: "none" },
+          paint: {
+            "line-color": "rgba(190,24,93,0.75)",
+            "line-width": 1.1,
+          },
+        });
+      }
+
+      function setJudicialPairVisibility(fillId, lineId, visible) {
+        if (!map.getLayer(fillId)) return;
+        var vis = visible ? "visible" : "none";
+        map.setLayoutProperty(fillId, "visibility", vis);
+        if (map.getLayer(lineId)) map.setLayoutProperty(lineId, "visibility", vis);
       }
 
       function buildStackedTooltipHtml(features) {
@@ -547,8 +1048,14 @@
             "tx-cd119-fill",
             "tx-sldu-fill",
             "tx-sldl-fill",
+            "tx-sboe-fill",
+            "tx-coa-fill",
+            "tx-cca-fill",
             "tx-school-fill",
             "tx-water-fill",
+            "tx-places-inc-fill",
+            "tx-places-cdp-fill",
+            "tx-urban-fill",
           ];
           var i = order.indexOf(layerId);
           return i === -1 ? 50 : i;
@@ -581,20 +1088,13 @@
         );
       }
 
-      Object.keys(tigerSpecs).forEach(function (checkboxId) {
-        var sp = tigerSpecs[checkboxId];
-        var raw = el.dataset[sp.dataUrlKey];
-        var url = raw && String(raw).trim() ? String(raw).trim() : "";
-        var cb = document.getElementById(checkboxId);
-        if (cb && !url) {
-          cb.disabled = true;
-          cb.checked = false;
-        }
-      });
-
       refreshActiveLayersSummary();
 
-      map.on("load", function () {
+      var ballotMapUiWired = false;
+
+      function installBallotMapOverlays() {
+        if (map.getSource("tx-counties")) return;
+
         map.addSource("tx-counties", {
           type: "geojson",
           data: geojsonUrl,
@@ -603,13 +1103,32 @@
           id: "tx-counties-fill",
           type: "fill",
           source: "tx-counties",
-          paint: { "fill-color": "#2563EB", "fill-opacity": 0.08 },
+          paint: { "fill-color": "#2563EB", "fill-opacity": BASE_COUNTY_FILL_ON },
         });
         map.addLayer({
           id: "tx-counties-line",
           type: "line",
           source: "tx-counties",
           paint: { "line-color": "rgba(255,255,255,0.38)", "line-width": 0.85 },
+        });
+        map.addLayer({
+          id: "tx-counties-label",
+          type: "symbol",
+          source: "tx-counties",
+          minzoom: 7,
+          layout: {
+            visibility: "none",
+            "text-field": ["coalesce", ["get", "NAME"], ""],
+            "text-size": 11,
+            "text-font": labelFontStack(),
+            "text-allow-overlap": false,
+            "text-ignore-placement": false,
+          },
+          paint: {
+            "text-color": "rgba(248, 250, 252, 0.88)",
+            "text-halo-color": "rgba(15, 23, 42, 0.9)",
+            "text-halo-width": 1.2,
+          },
         });
 
         Object.keys(tigerSpecs).forEach(function (checkboxId) {
@@ -619,30 +1138,133 @@
           if (url) addBundledLegislativeLayers(sp, url);
         });
 
+        var coaUrlInst = (el.dataset.coaUrl || "").trim();
+        if (coaUrlInst) addCoaAppealsLayers(coaUrlInst);
+        var ccaUrlInst = (el.dataset.ccaUrl || "").trim();
+        if (ccaUrlInst) addCriminalAppealsLayers(ccaUrlInst);
+
+        var countyCbEnable = document.getElementById("layer-tx-counties");
+        if (countyCbEnable) countyCbEnable.disabled = false;
+
+        Object.keys(tigerSpecs).forEach(function (checkboxId) {
+          var sp = tigerSpecs[checkboxId];
+          var cbt = document.getElementById(checkboxId);
+          if (!map.getLayer(sp.fillId) || !cbt) return;
+          setTigerVisibility(sp, cbt.checked);
+        });
+        var coaCbx = document.getElementById("layer-tx-coa");
+        if (coaCbx && map.getLayer("tx-coa-fill")) {
+          setJudicialPairVisibility("tx-coa-fill", "tx-coa-line", coaCbx.checked);
+        }
+        var ccaCbx = document.getElementById("layer-tx-cca");
+        if (ccaCbx && map.getLayer("tx-cca-fill")) {
+          setJudicialPairVisibility("tx-cca-fill", "tx-cca-line", ccaCbx.checked);
+        }
+
+        var countyCbApply = document.getElementById("layer-tx-counties");
+        if (countyCbApply) {
+          setCountyVisibility(countyCbApply.checked);
+        } else {
+          applyAllOverlayFillOpacities();
+          applyAllLabelVisibility();
+        }
+      }
+
+      function registerBallotMapUiOnce() {
+        if (ballotMapUiWired) return;
+        ballotMapUiWired = true;
+
         var countyCb = document.getElementById("layer-tx-counties");
         if (countyCb) {
-          countyCb.disabled = false;
           countyCb.addEventListener("change", function () {
             setCountyVisibility(countyCb.checked);
             refreshActiveLayersSummary();
+            pushLocationHashFromUi();
           });
         }
 
         Object.keys(tigerSpecs).forEach(function (checkboxId) {
-          wireLegislativeCheckbox(checkboxId);
+          var spec = tigerSpecs[checkboxId];
+          var cb = document.getElementById(checkboxId);
+          if (!cb) return;
+          cb.addEventListener("change", function () {
+            if (map.getLayer(spec.fillId)) setTigerVisibility(spec, cb.checked);
+            refreshActiveLayersSummary();
+            pushLocationHashFromUi();
+          });
         });
 
-        map.on("click", function (e) {
-          hideCountyTooltip();
-          setInspectorHtml(
-            '<p class="text-xs text-white/55 m-0">Loading <strong class="text-white/80">Results for your selection</strong> below…</p>',
-          );
-          var lng = e.lngLat.lng;
-          var lat = e.lngLat.lat;
-          loadContext(lat, lng);
-        });
+        var coaCb = document.getElementById("layer-tx-coa");
+        if (coaCb) {
+          coaCb.addEventListener("change", function () {
+            if (map.getLayer("tx-coa-fill")) {
+              setJudicialPairVisibility("tx-coa-fill", "tx-coa-line", coaCb.checked);
+            }
+            refreshActiveLayersSummary();
+            pushLocationHashFromUi();
+          });
+        }
+        var ccaCb = document.getElementById("layer-tx-cca");
+        if (ccaCb) {
+          ccaCb.addEventListener("change", function () {
+            if (map.getLayer("tx-cca-fill")) {
+              setJudicialPairVisibility("tx-cca-fill", "tx-cca-line", ccaCb.checked);
+            }
+            refreshActiveLayersSummary();
+            pushLocationHashFromUi();
+          });
+        }
 
-        map.on("mousemove", function (e) {
+        var op = document.getElementById("map-overlay-opacity");
+        if (op) {
+          op.addEventListener("input", function () {
+            updateOverlayStrengthLabel();
+            applyAllOverlayFillOpacities();
+          });
+        }
+
+        var lbl = document.getElementById("map-show-labels");
+        if (lbl) {
+          lbl.addEventListener("change", function () {
+            applyAllLabelVisibility();
+          });
+        }
+
+        var bms = document.getElementById("map-basemap");
+        if (bms) {
+          bms.addEventListener("change", function () {
+            basemapKey = bms.value || "demo";
+            map.setStyle(BASEMAPS[basemapKey].url);
+            map.once("load", function () {
+              installBallotMapOverlays();
+              registerBallotMapUiOnce();
+              refreshActiveLayersSummary();
+              updateOverlayStrengthLabel();
+              pushLocationHashFromUi();
+            });
+          });
+        }
+      }
+
+      map.on("load", function () {
+        installBallotMapOverlays();
+        registerBallotMapUiOnce();
+        refreshActiveLayersSummary();
+        updateOverlayStrengthLabel();
+        pushLocationHashFromUi();
+      });
+
+      map.on("click", function (e) {
+        hideCountyTooltip();
+        setInspectorHtml(
+          '<p class="text-xs text-white/55 m-0">Loading <strong class="text-white/80">Results for your selection</strong> below…</p>',
+        );
+        var lng = e.lngLat.lng;
+        var lat = e.lngLat.lat;
+        loadContext(lat, lng);
+      });
+
+      map.on("mousemove", function (e) {
           var layerIds = tooltipFillLayerIds();
           var ev = e.originalEvent;
           if (!layerIds.length) {
@@ -670,7 +1292,6 @@
             map.getCanvas().style.cursor = "";
           });
         }
-      });
 
       document.getElementById("ballot-geocode-form").addEventListener("submit", function (ev) {
         ev.preventDefault();

@@ -39,8 +39,9 @@ def _legislative_geojson_urls() -> dict[str, str | bool]:
     """
     URLs for bundled map overlays (same pattern as tx-counties.geojson).
 
-    Files are produced by ``manage.py fetch_texas_legislative_geojson`` (legislative,
-    merged school districts, and TCEQ water districts) so the map does not call remote APIs on each view.
+    Files are produced by ``manage.py fetch_texas_legislative_geojson`` (legislative, SBOE PLANE2106,
+    places / CDPs / urban areas from Census, merged school districts, TCEQ water, etc.)
+    so the map does not call remote APIs on each page view.
     """
     geo_dir = Path(settings.BASE_DIR) / "static" / "geo"
 
@@ -54,12 +55,24 @@ def _legislative_geojson_urls() -> dict[str, str | bool]:
     sdl = _u("tx-sldl.geojson")
     school = _u("tx-school-districts.geojson")
     water = _u("tx-water-districts.geojson")
+    sboe = _u("tx-sboe-plane2106.geojson")
+    coa = _u("tx-coa-districts.geojson")
+    cca = _u("tx-cca-statewide.geojson")
+    places = _u("tx-places-incorporated.geojson")
+    cdp = _u("tx-places-cdp.geojson")
+    urban = _u("tx-urban-areas.geojson")
     return {
         "tx_cd119_geojson_url": cd,
         "tx_sldu_geojson_url": sdu,
         "tx_sldl_geojson_url": sdl,
+        "tx_sboe_geojson_url": sboe,
         "tx_school_geojson_url": school,
         "tx_water_geojson_url": water,
+        "tx_coa_geojson_url": coa,
+        "tx_cca_geojson_url": cca,
+        "tx_places_incorporated_geojson_url": places,
+        "tx_places_cdp_geojson_url": cdp,
+        "tx_urban_areas_geojson_url": urban,
         "legislative_geo_bundled": bool(cd and sdu and sdl),
     }
 

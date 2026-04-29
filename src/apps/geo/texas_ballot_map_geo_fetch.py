@@ -1,5 +1,6 @@
 """
-GeoJSON bundles for the Texas ballot map: Census TIGERweb (legislative, school) and TCEQ (water districts).
+GeoJSON bundles for the Texas ballot map: Census TIGERweb (legislative, school, places, urban)
+and TCEQ (water districts), plus Texas Legislative Council SBOE Plan E2106 from Capitol Data.
 
 Used by ``manage.py fetch_texas_legislative_geojson`` (writes under ``static/geo/``).
 """
@@ -7,17 +8,41 @@ Used by ``manage.py fetch_texas_legislative_geojson`` (writes under ``static/geo
 from __future__ import annotations
 
 import json
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
+import zipfile
+from pathlib import Path
 from typing import Any
 
 from apps.geo.tigerweb_legislative import TX_STATE_WHERE, fetch_texas_legislative_bundle
+from apps.geo.texas_judicial_geo import (
+    build_cca_geojson,
+    build_coa_geojson,
+    load_tx_counties_geojson_from_path,
+    validate_coa_county_coverage,
+)
 
 TIGERWEB_SCHOOL_MAPSERVER = (
     "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/School/MapServer"
 )
+TIGERWEB_PLACES_MAPSERVER = (
+    "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer"
+)
+TIGERWEB_URBAN_MAPSERVER = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Urban/MapServer"
 TCEQ_WATER_MAPSERVER = "https://gisweb.tceq.texas.gov/arcgis/rest/services/Public/WaterDistricts/MapServer"
+
+# Places / urban: current-year-ish TIGERweb layer ids (see each service's ?f=json catalog)
+PLACES_INCORPORATED_LAYER_ID = 4
+PLACES_CDP_LAYER_ID = 5
+URBAN_AREA_2020_LAYER_ID = 0
+
+# Texas Legislative Council — S.B. 7 Plan E2106 (SBOE), same archive linked from Capitol Data portal.
+PLANE2106_ZIP_URL = (
+    "https://data.capitol.texas.gov/dataset/ad1ae979-6df9-4322-98cf-6771cc67f02d/"
+    "resource/640a507d-e26e-4b50-861c-7913c152bdc7/download/plane2106.zip"
+)
 
 # Census School service: unified / secondary / elementary (ACS 2025 block uses layers 0–2)
 SCHOOL_LAYER_IDS: tuple[tuple[str, int], ...] = (
@@ -128,21 +153,205 @@ def fetch_tceq_water_districts() -> dict[str, Any]:
     )
 
 
-def fetch_all_ballot_map_geo_bundles() -> list[tuple[str, str, dict[str, Any]]]:
+def _json_safe_property_value(val: Any) -> Any:
+    """
+    Convert shapefile / GDAL attribute values to JSON-serializable scalars.
+
+    Django GDAL may return OFTInteger64 and similar wrappers that are not handled by :func:`json.dumps`.
+    """
+    if val is None:
+        return None
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val
+    if isinstance(val, int) and not isinstance(val, bool):
+        return val
+    if isinstance(val, float):
+        return val
+    if isinstance(val, (bytes, memoryview)):
+        return bytes(val).decode("utf-8", "replace")
+    if hasattr(val, "isoformat") and callable(getattr(val, "isoformat")):
+        try:
+            return val.isoformat()
+        except Exception:
+            pass
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        pass
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        pass
+    return str(val)
+
+
+def shapefile_to_geojson_feature_collection(shp_path: Path) -> dict[str, Any]:
+    """
+    Read an Esri shapefile (path to ``*.shp``) into a GeoJSON FeatureCollection (WGS84).
+
+    Requires GDAL bindings (available in the production Docker image and typical PostGIS dev setups).
+    """
+    from django.contrib.gis.gdal import DataSource
+
+    ds = DataSource(str(shp_path))
+    layer = ds[0]
+    out_features: list[dict[str, Any]] = []
+    for feat in layer:
+        ogr_geom = feat.geom
+        if ogr_geom is None:
+            continue
+        ogr_geom.transform(4326)
+        geos = ogr_geom.geos
+        props: dict[str, Any] = {}
+        for name in layer.fields:
+            try:
+                props[name] = _json_safe_property_value(feat[name])
+            except (IndexError, KeyError, TypeError, ValueError):
+                props[name] = None
+        out_features.append(
+            {
+                "type": "Feature",
+                "properties": props,
+                "geometry": json.loads(geos.geojson),
+            }
+        )
+    return {"type": "FeatureCollection", "features": out_features}
+
+
+def fetch_texas_sboe_plane2106_geojson(*, timeout_s: float = 120.0) -> dict[str, Any]:
+    """
+    State Board of Education districts, Plan E2106 (effective Jan 2023), from Capitol Data.
+
+    Source: https://data.capitol.texas.gov/dataset/plane2106 — shapefile inside ``PLANE2106.zip``.
+    """
+    with tempfile.TemporaryDirectory(prefix="plane2106_") as td_raw:
+        td = Path(td_raw)
+        zpath = td / "plane2106.zip"
+        req = urllib.request.Request(
+            PLANE2106_ZIP_URL,
+            headers={
+                "User-Agent": (
+                    "ballotbox-py/1.0 (+https://github.com/) texas-ballot-map-sboe-plane2106"
+                ),
+                "Accept": "*/*",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            zpath.write_bytes(resp.read())
+        with zipfile.ZipFile(zpath) as zf:
+            zf.extractall(td)
+        shp = td / "PLANE2106" / "PLANE2106.shp"
+        if not shp.is_file():
+            raise FileNotFoundError(f"Expected shapefile at {shp} after extracting Capitol PLANE2106.zip")
+        return shapefile_to_geojson_feature_collection(shp)
+
+
+def fetch_texas_incorporated_places() -> dict[str, Any]:
+    """Census TIGERweb: incorporated places clipped to Texas (STATE='48')."""
+    return arcgis_geojson_paged(
+        TIGERWEB_PLACES_MAPSERVER,
+        PLACES_INCORPORATED_LAYER_ID,
+        TX_STATE_WHERE,
+        page_size=50,
+        max_offset=80_000,
+        timeout_s=240.0,
+    )
+
+
+def fetch_texas_census_designated_places() -> dict[str, Any]:
+    """Census TIGERweb: Census Designated Places in Texas."""
+    return arcgis_geojson_paged(
+        TIGERWEB_PLACES_MAPSERVER,
+        PLACES_CDP_LAYER_ID,
+        TX_STATE_WHERE,
+        page_size=50,
+        max_offset=50_000,
+        timeout_s=240.0,
+    )
+
+
+def fetch_texas_urban_areas_2020_name_tx() -> dict[str, Any]:
+    """
+    Census 2020 Urban Areas whose TIGERweb ``NAME`` ends with ``, TX`` (Texas portions).
+
+    This avoids pulling the full national urban layer while still covering Texas metro footprints.
+    """
+    return arcgis_geojson_paged(
+        TIGERWEB_URBAN_MAPSERVER,
+        URBAN_AREA_2020_LAYER_ID,
+        "NAME LIKE '%, TX%'",
+        page_size=100,
+        max_offset=10_000,
+        timeout_s=300.0,
+    )
+
+
+def fetch_texas_judicial_ballot_map_bundles(counties_geojson_path: Path) -> list[tuple[str, str, dict[str, Any]]]:
+    """
+    Courts of Appeals (§22.201) + Court of Criminal Appeals (statewide), built from ``tx-counties.geojson``.
+    """
+    fc = load_tx_counties_geojson_from_path(counties_geojson_path)
+    validate_coa_county_coverage(fc)
+    coa = build_coa_geojson(fc)
+    cca = build_cca_geojson(fc)
+    return [
+        ("tx-coa-districts.geojson", "Texas Courts of Appeals (Gov't Code §22.201)", coa),
+        ("tx-cca-statewide.geojson", "Texas Court of Criminal Appeals (statewide)", cca),
+    ]
+
+
+def fetch_all_ballot_map_geo_bundles(
+    *,
+    counties_geojson_path: Path | None = None,
+) -> list[tuple[str, str, dict[str, Any]]]:
     """
     Return ordered (filename, human label, GeoJSON dict) for every ballot-map overlay file.
     """
     cd, sdu, sdl = fetch_texas_legislative_bundle()
+    sboe = fetch_texas_sboe_plane2106_geojson()
     school = fetch_texas_school_districts_merged()
     water = fetch_tceq_water_districts()
-    return [
+    places = fetch_texas_incorporated_places()
+    cdps = fetch_texas_census_designated_places()
+    urban = fetch_texas_urban_areas_2020_name_tx()
+    rows = [
         ("tx-cd119.geojson", "U.S. House (119th)", cd),
         ("tx-sldu.geojson", "Texas Senate", sdu),
         ("tx-sldl.geojson", "Texas House", sdl),
+        (
+            "tx-sboe-plane2106.geojson",
+            "Texas State Board of Education — Plan E2106 (Capitol Data shapefile)",
+            sboe,
+        ),
         (
             "tx-school-districts.geojson",
             "Texas school districts (Census: unified / secondary / elementary)",
             school,
         ),
         ("tx-water-districts.geojson", "Texas water districts (TCEQ)", water),
+        (
+            "tx-places-incorporated.geojson",
+            "Texas incorporated places (Census TIGERweb)",
+            places,
+        ),
+        (
+            "tx-places-cdp.geojson",
+            "Texas Census Designated Places (Census TIGERweb)",
+            cdps,
+        ),
+        (
+            "tx-urban-areas.geojson",
+            "Texas urban areas, 2020 (Census TIGERweb; NAME LIKE '%, TX%')",
+            urban,
+        ),
     ]
+    cpath = counties_geojson_path
+    if cpath is None:
+        from django.conf import settings
+
+        cpath = Path(settings.BASE_DIR) / "static" / "geo" / "tx-counties.geojson"
+    if cpath.is_file():
+        rows.extend(fetch_texas_judicial_ballot_map_bundles(Path(cpath)))
+    return rows
