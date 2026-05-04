@@ -9,7 +9,10 @@ def main() -> None:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
         raise ImportError(
-            "Couldn't import Django. Are you sure it's installed and available on your PYTHONPATH?"
+            "Couldn't import Django. This project runs Django in Docker by default. "
+            "From the repository root, run: "
+            "docker compose exec web bash -lc 'cd /app/src && python manage.py <command>' "
+            "or use the root wrapper: python manage.py <command>."
         ) from exc
     execute_from_command_line(sys.argv)
 

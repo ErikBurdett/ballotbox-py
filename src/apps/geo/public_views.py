@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Prefetch, Q
+from django.db.models import Count, Prefetch, Q
 from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -15,6 +15,8 @@ from .jurisdiction_canonical import dedupe_jurisdictions_queryset_by_url_slug
 from .models import District, Jurisdiction, JurisdictionType
 
 _RACE_HUB_LIMIT = 200
+GROUNDWATER_BOARD_OFFICE_NAME = "Groundwater Conservation District Board Director"
+WATER_BOARD_OFFICE_SUFFIX = " Board Director"
 
 _MUNICIPAL_TYPES = (
     JurisdictionType.CITY,
@@ -181,6 +183,54 @@ def city_detail(request, state: str, city_slug: str):
     jurisdiction = resolve_city_jurisdiction(state, city_slug)
     ctx = _jurisdiction_hub_context(request, jurisdiction)
     return render(request, "geo/jurisdiction_detail.html", ctx)
+
+
+def texas_groundwater_districts(request):
+    districts = (
+        Jurisdiction.objects.filter(
+            state="TX",
+            jurisdiction_type=JurisdictionType.SPECIAL_DISTRICT,
+            offices__name=GROUNDWATER_BOARD_OFFICE_NAME,
+        )
+        .annotate(
+            officeholder_count=Count("officeholder_terms", distinct=True),
+            race_count=Count("offices__races", distinct=True),
+        )
+        .distinct()
+        .order_by("name")
+    )
+    return render(
+        request,
+        "geo/texas_groundwater_districts.html",
+        {
+            "districts": districts,
+            "canonical_url": request.build_absolute_uri(request.path),
+        },
+    )
+
+
+def texas_water_districts(request):
+    districts = (
+        Jurisdiction.objects.filter(
+            state="TX",
+            jurisdiction_type=JurisdictionType.SPECIAL_DISTRICT,
+            offices__name__endswith=WATER_BOARD_OFFICE_SUFFIX,
+        )
+        .annotate(
+            officeholder_count=Count("officeholder_terms", distinct=True),
+            race_count=Count("offices__races", distinct=True),
+        )
+        .distinct()
+        .order_by("name")
+    )
+    return render(
+        request,
+        "geo/texas_water_districts.html",
+        {
+            "districts": districts,
+            "canonical_url": request.build_absolute_uri(request.path),
+        },
+    )
 
 
 def jurisdiction_detail(request, public_id):

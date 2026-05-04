@@ -58,6 +58,11 @@ def _legislative_geojson_urls() -> dict[str, str | bool]:
     sboe = _u("tx-sboe-plane2106.geojson")
     coa = _u("tx-coa-districts.geojson")
     cca = _u("tx-cca-statewide.geojson")
+    gcd = _u("tx-groundwater-conservation-districts.geojson")
+    pgma = _u("tx-priority-groundwater-management-areas.geojson")
+    gma = _u("tx-groundwater-management-areas.geojson")
+    rwpa = _u("tx-regional-water-planning-areas.geojson")
+    rasl = _u("tx-river-authorities-special-law-districts.geojson")
     places = _u("tx-places-incorporated.geojson")
     cdp = _u("tx-places-cdp.geojson")
     urban = _u("tx-urban-areas.geojson")
@@ -70,10 +75,17 @@ def _legislative_geojson_urls() -> dict[str, str | bool]:
         "tx_water_geojson_url": water,
         "tx_coa_geojson_url": coa,
         "tx_cca_geojson_url": cca,
+        "tx_gcd_geojson_url": gcd,
+        "tx_pgma_geojson_url": pgma,
+        "tx_gma_geojson_url": gma,
+        "tx_rwpa_geojson_url": rwpa,
+        "tx_rasl_geojson_url": rasl,
         "tx_places_incorporated_geojson_url": places,
         "tx_places_cdp_geojson_url": cdp,
         "tx_urban_areas_geojson_url": urban,
-        "legislative_geo_bundled": bool(cd and sdu and sdl),
+        "legislative_geo_bundled": bool(
+            cd and sdu and sdl and sboe and school and water and gcd and pgma and gma and rwpa and rasl and places and cdp and urban
+        ),
     }
 
 

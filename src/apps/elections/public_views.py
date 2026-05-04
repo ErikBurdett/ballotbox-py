@@ -18,6 +18,7 @@ from apps.people.models import ContactMethod, ExternalLink, Party, Person, Socia
 from .models import Candidacy, CandidacyStatus, Election, ElectionType, Race
 
 TEXAS_RACES_STATE = "TX"
+GROUNDWATER_BOARD_OFFICE_NAME = "Groundwater Conservation District Board Director"
 # Public runoff directory: include scheduled runoffs from this calendar date forward,
 # plus any runoff on or after "today" (covers late-2024 runoffs if the page is viewed before 2025).
 RUNOFF_DIRECTORY_START = date(2025, 1, 1)
@@ -154,7 +155,7 @@ def _apply_global_search_candidacies(qs, query: str):
     return qs.filter(search_q)
 
 
-def candidates_directory(request):
+def candidates_directory(request, *, groundwater_only: bool = False):
     q = (request.GET.get("q") or "").strip()
     state = (request.GET.get("state") or "").strip().upper()
     county = _norm_county(request.GET.get("county") or "")
@@ -175,6 +176,7 @@ def candidates_directory(request):
     incumbent_only = _truthy(request.GET.get("incumbent"))
     challenger_only = _truthy(request.GET.get("challenger"))
     has_video = _truthy(request.GET.get("has_video"))
+    groundwater_only = groundwater_only or _truthy(request.GET.get("groundwater"))
 
     sort = (request.GET.get("sort") or "election_date").strip()
 
@@ -227,6 +229,12 @@ def candidates_directory(request):
         )
     if jurisdiction_type in {c[0] for c in JurisdictionType.choices}:
         candidacies = candidacies.filter(race__office__jurisdiction__jurisdiction_type=jurisdiction_type)
+    if groundwater_only:
+        candidacies = candidacies.filter(
+            race__office__jurisdiction__state="TX",
+            race__office__jurisdiction__jurisdiction_type=JurisdictionType.SPECIAL_DISTRICT,
+            race__office__name=GROUNDWATER_BOARD_OFFICE_NAME,
+        )
 
     if district_type in {c[0] for c in DistrictType.choices}:
         candidacies = candidacies.filter(race__district__district_type=district_type)
@@ -327,6 +335,17 @@ def candidates_directory(request):
         "office_branch_choices": OfficeBranch.choices,
         "party_choices": Party.choices,
         "candidacy_status_choices": CandidacyStatus.choices,
+        "directory_title": "Groundwater Conservation District candidates"
+        if groundwater_only
+        else "Candidates running for office",
+        "directory_description": (
+            "Candidates tied to Texas Groundwater Conservation District board races."
+            if groundwater_only
+            else "Filter by geography, office, party, election date, and candidate status. URLs are shareable."
+        ),
+        "candidates_form_url_name": "elections:groundwater_candidates_directory"
+        if groundwater_only
+        else "elections:candidates_directory",
         "filters": {
             "q": q,
             "state": state,
@@ -345,6 +364,7 @@ def candidates_directory(request):
             "challenger": challenger_only,
             "has_video": has_video,
             "sort": sort,
+            "groundwater": groundwater_only,
         },
     }
 
@@ -352,6 +372,10 @@ def candidates_directory(request):
         return render(request, "elections/partials/_candidates_results.html", context)
 
     return render(request, "elections/candidates_directory.html", context)
+
+
+def groundwater_candidates_directory(request):
+    return candidates_directory(request, groundwater_only=True)
 
 
 def races_list_texas(request):

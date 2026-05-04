@@ -12,6 +12,8 @@ from apps.people.models import ContactMethod, ExternalLink, Party, Person, Socia
 
 from .models import OfficeBranch, OfficeLevel
 
+GROUNDWATER_BOARD_OFFICE_NAME = "Groundwater Conservation District Board Director"
+
 
 def _dedupe_terms_for_directory(terms: list) -> list:
     """Collapse duplicate term rows for the same office + jurisdiction + district + status.
@@ -124,7 +126,7 @@ def _apply_global_search_terms(qs, query: str):
     return qs.filter(search_q)
 
 
-def officials_directory(request):
+def officials_directory(request, *, groundwater_only: bool = False):
     q = (request.GET.get("q") or "").strip()
     state = (request.GET.get("state") or "").strip().upper()
     if not state:
@@ -147,6 +149,7 @@ def officials_directory(request):
 
     status = (request.GET.get("status") or "current").strip()
     has_video = _truthy(request.GET.get("has_video"))
+    groundwater_only = groundwater_only or _truthy(request.GET.get("groundwater"))
 
     sort = (request.GET.get("sort") or "updated").strip()
 
@@ -185,6 +188,12 @@ def officials_directory(request):
         )
     if jurisdiction_type in {c[0] for c in JurisdictionType.choices}:
         terms = terms.filter(Q(jurisdiction__jurisdiction_type=jurisdiction_type) | Q(office__jurisdiction__jurisdiction_type=jurisdiction_type))
+    if groundwater_only:
+        terms = terms.filter(
+            office__jurisdiction__state="TX",
+            office__jurisdiction__jurisdiction_type=JurisdictionType.SPECIAL_DISTRICT,
+            office__name=GROUNDWATER_BOARD_OFFICE_NAME,
+        )
 
     if district_type in {c[0] for c in DistrictType.choices}:
         terms = terms.filter(district__district_type=district_type)
@@ -264,6 +273,17 @@ def officials_directory(request):
         "office_level_choices": OfficeLevel.choices,
         "office_branch_choices": OfficeBranch.choices,
         "party_choices": Party.choices,
+        "directory_title": "Groundwater Conservation District officials"
+        if groundwater_only
+        else "Current elected officials",
+        "directory_description": (
+            "Current board officials tied to Texas Groundwater Conservation District jurisdictions synced from TCEQ."
+            if groundwater_only
+            else "Filter by geography, office, party, and status. URLs are shareable."
+        ),
+        "officials_form_url_name": "offices:groundwater_officials_directory"
+        if groundwater_only
+        else "offices:officials_directory",
         "filters": {
             "q": q,
             "state": state,
@@ -278,6 +298,7 @@ def officials_directory(request):
             "status": status,
             "has_video": has_video,
             "sort": sort,
+            "groundwater": groundwater_only,
         },
     }
 
@@ -285,4 +306,8 @@ def officials_directory(request):
         return render(request, "offices/partials/_officials_results.html", context)
 
     return render(request, "offices/officials_directory.html", context)
+
+
+def groundwater_officials_directory(request):
+    return officials_directory(request, groundwater_only=True)
 

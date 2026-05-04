@@ -17,6 +17,11 @@ src/static/geo/tx-sldl.geojson
 src/static/geo/tx-sboe-plane2106.geojson
 src/static/geo/tx-school-districts.geojson
 src/static/geo/tx-water-districts.geojson
+src/static/geo/tx-groundwater-conservation-districts.geojson
+src/static/geo/tx-priority-groundwater-management-areas.geojson
+src/static/geo/tx-groundwater-management-areas.geojson
+src/static/geo/tx-regional-water-planning-areas.geojson
+src/static/geo/tx-river-authorities-special-law-districts.geojson
 src/static/geo/tx-places-incorporated.geojson
 src/static/geo/tx-places-cdp.geojson
 src/static/geo/tx-urban-areas.geojson

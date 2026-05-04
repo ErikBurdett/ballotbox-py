@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load querystring %}
 
-{% block title %}Candidates · {{ SITE_NAME }}{% endblock %}
+{% block title %}{{ directory_title|default:"Candidates" }} · {{ SITE_NAME }}{% endblock %}
 {% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
 
 {% block content %}
@@ -9,19 +9,22 @@
     <div class="surface p-6">
       <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
         <div>
-          <h1 class="text-2xl font-semibold">Candidates running for office</h1>
-          <p class="mt-2 text-sm text-white/70">Filter by geography, office, party, election date, and candidate status. URLs are shareable.</p>
+          <h1 class="text-2xl font-semibold">{{ directory_title|default:"Candidates running for office" }}</h1>
+          <p class="mt-2 text-sm text-white/70">{{ directory_description|default:"Filter by geography, office, party, election date, and candidate status. URLs are shareable." }}</p>
         </div>
         <div class="text-sm text-white/60">Showing {{ page_obj.paginator.count }} people</div>
       </div>
 
       <form
         class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
-        hx-get="{% url 'elections:candidates_directory' %}"
+        hx-get="{% if filters.groundwater %}{% url 'elections:groundwater_candidates_directory' %}{% else %}{% url 'elections:candidates_directory' %}{% endif %}"
         hx-target="#results"
         hx-push-url="true"
         hx-trigger="change, keyup changed delay:400ms from:input"
       >
+        {% if filters.groundwater %}
+          <input type="hidden" name="groundwater" value="1" />
+        {% endif %}
         <div class="sm:col-span-2 lg:col-span-4">
           <label class="block text-xs text-white/60 mb-1">Search</label>
           <input name="q" class="input" value="{{ filters.q }}" placeholder="Search names, offices, counties, districts, parties, status, contact links, etc." />

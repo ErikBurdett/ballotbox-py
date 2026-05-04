@@ -91,6 +91,18 @@ docker compose logs -f assets
 
 ### Common commands
 
+- **Run Django management commands** from the repo root:
+
+```bash
+python manage.py <command>
+```
+
+The root `manage.py` wrapper delegates to Docker Compose when Django is not installed locally. The explicit Docker form is:
+
+```bash
+docker compose exec web bash -lc 'cd /app/src && python manage.py <command>'
+```
+
 - **Run tests**:
 
 ```bash

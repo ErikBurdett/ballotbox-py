@@ -12,7 +12,24 @@ def test_texas_ballot_map_page(client):
     assert resp.status_code == 200
     assert b"Texas ballot map" in resp.content
     assert b"Map layers" in resp.content
+    assert b"Groundwater conservation districts" in resp.content
     assert b"maplibre-gl" in resp.content.lower() or b"maplibre" in resp.content.lower()
+
+
+@pytest.mark.django_db
+def test_texas_groundwater_districts_page(client):
+    resp = client.get(reverse("geo:texas_groundwater_districts"))
+    assert resp.status_code == 200
+    assert b"Texas Groundwater Conservation Districts" in resp.content
+    assert b"GCD officials" in resp.content
+    assert b"GCD candidates" in resp.content
+
+
+@pytest.mark.django_db
+def test_texas_water_districts_page(client):
+    resp = client.get(reverse("geo:texas_water_districts"))
+    assert resp.status_code == 200
+    assert b"Texas Water Districts" in resp.content
 
 
 @pytest.mark.django_db

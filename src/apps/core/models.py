@@ -26,7 +26,6 @@ class ReviewStatus(models.TextChoices):
     APPROVED = "approved", "Approved"
     REJECTED = "rejected", "Rejected"
 
-
 class ReviewableModel(TimeStampedModel):
     review_status = models.CharField(
         max_length=32, choices=ReviewStatus.choices, default=ReviewStatus.NEEDS_REVIEW, db_index=True

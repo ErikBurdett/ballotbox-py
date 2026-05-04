@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Texas Groundwater Conservation Districts · {{ SITE_NAME }}{% endblock %}
+{% block canonical %}<link rel="canonical" href="{{ canonical_url }}">{% endblock %}
+
+{% block content %}
+  <section class="container-padded pt-10 pb-16">
+    <div class="surface p-6">
+      <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+        <div>
+          <h1 class="text-2xl font-semibold">Texas Groundwater Conservation Districts</h1>
+          <p class="mt-2 text-sm text-white/70 max-w-3xl">
+            Jurisdictions synced from TCEQ Groundwater Conservation District boundaries. Use these directory views
+            for GCD board officials and candidates as records are added.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2 text-sm">
+          <a class="btn no-underline" href="{% url 'offices:groundwater_officials_directory' %}">GCD officials</a>
+          <a class="btn-outline no-underline" href="{% url 'elections:groundwater_candidates_directory' %}">GCD candidates</a>
+          <a class="btn-outline no-underline" href="{% url 'geo:texas_ballot_map' %}#l=gc,pg">View on map</a>
+        </div>
+      </div>
+
+      <div class="mt-6 rounded-2xl border border-white/10 overflow-hidden">
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 bg-white/[0.04] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-white/55">
+          <div>District</div>
+          <div>Officials</div>
+          <div>Races</div>
+        </div>
+        {% for district in districts %}
+          <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 px-4 py-3 border-t border-white/10 text-sm">
+            <div>
+              <a class="text-white hover:underline" href="{% url 'geo:jurisdiction_detail' district.public_id %}">{{ district.name }}</a>
+              <div class="text-xs text-white/45">{{ district.get_jurisdiction_type_display }} · {{ district.state }}</div>
+            </div>
+            <div class="text-white/70 md:text-right">{{ district.officeholder_count }}</div>
+            <div class="text-white/70 md:text-right">{{ district.race_count }}</div>
+          </div>
+        {% empty %}
+          <div class="px-4 py-6 text-sm text-white/55">
+            No GCD jurisdictions have been synced yet. Run
+            <code class="font-mono text-white/75">python manage.py sync_tceq_gcd_jurisdictions</code>
+            after fetching the map GeoJSON.
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

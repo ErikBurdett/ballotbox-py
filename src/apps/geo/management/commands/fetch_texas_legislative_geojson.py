@@ -15,6 +15,9 @@ class Command(BaseCommand):
         "Texas Legislative Council SBOE Plan E2106 (tx-sboe-plane2106.geojson from Capitol Data zip), "
         "Census School (unified + secondary + elementary merged as tx-school-districts.geojson), "
         "TCEQ water districts (tx-water-districts.geojson), "
+        "TCEQ GCD Viewer groundwater conservation districts and PGMAs "
+        "(tx-groundwater-conservation-districts.geojson, tx-priority-groundwater-management-areas.geojson), "
+        "TWDB GMA/RWPA/RASL planning boundaries, "
         "Census TIGERweb incorporated places + CDPs + 2020 urban areas (tx-places-*.geojson, tx-urban-areas.geojson), "
         "plus — when static/geo/tx-counties.geojson is present — "
         "Texas Courts of Appeals polygons (tx-coa-districts.geojson, Gov't Code §22.201 county dissolve) and "
@@ -33,7 +36,10 @@ class Command(BaseCommand):
         dry = bool(options.get("dry_run"))
         geo_dir = Path(settings.BASE_DIR) / "static" / "geo"
 
-        self.stdout.write("Fetching legislative (Census), school (Census), water (TCEQ), and appellate (county dissolve)…")
+        self.stdout.write(
+            "Fetching legislative (Census), school / places / urban (Census), "
+            "water / GCD / PGMA (TCEQ), and appellate (county dissolve)…"
+        )
         bundles = fetch_all_ballot_map_geo_bundles()
 
         for fname, label, data in bundles:

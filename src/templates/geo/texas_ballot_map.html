@@ -23,9 +23,9 @@
             <div class="flex-1 min-w-[200px]">
               <label for="map-basemap" class="block text-xs font-semibold text-white/70 mb-1">Basemap</label>
               <select id="map-basemap" class="input w-full max-w-xs">
-                <option value="demo" selected>MapLibre demo (light)</option>
+                <option value="demo">MapLibre demo (light)</option>
                 <option value="positron">Carto Positron (light)</option>
-                <option value="dark">Carto Dark Matter</option>
+                <option value="dark" selected>Carto Dark Matter</option>
               </select>
             </div>
             <div class="flex-1 min-w-[220px] lg:max-w-md">
@@ -77,6 +77,11 @@
               data-water-url="{{ tx_water_geojson_url|default:'' }}"
               data-coa-url="{{ tx_coa_geojson_url|default:'' }}"
               data-cca-url="{{ tx_cca_geojson_url|default:'' }}"
+              data-gcd-url="{{ tx_gcd_geojson_url|default:'' }}"
+              data-pgma-url="{{ tx_pgma_geojson_url|default:'' }}"
+              data-gma-url="{{ tx_gma_geojson_url|default:'' }}"
+              data-rwpa-url="{{ tx_rwpa_geojson_url|default:'' }}"
+              data-rasl-url="{{ tx_rasl_geojson_url|default:'' }}"
               data-sboe-url="{{ tx_sboe_geojson_url|default:'' }}"
               data-places-inc-url="{{ tx_places_incorporated_geojson_url|default:'' }}"
               data-places-cdp-url="{{ tx_places_cdp_geojson_url|default:'' }}"
@@ -95,8 +100,11 @@
             <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Legislative/MapServer" rel="noopener noreferrer" target="_blank">TIGERweb Legislative</a>;
             school districts:
             <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/School/MapServer" rel="noopener noreferrer" target="_blank">TIGERweb School</a>;
-            water:
+            water / GCD / PGMA:
             <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://gisweb.tceq.texas.gov/arcgis/rest/services/Public/WaterDistricts/MapServer" rel="noopener noreferrer" target="_blank">TCEQ</a>.
+            Groundwater layers match the public
+            <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://www.tceq.texas.gov/gis/pgma-gcd-viewer" rel="noopener noreferrer" target="_blank">TCEQ GCD Viewer</a>
+            services for GCD and PGMA boundaries.
             <strong class="text-white/80">Courts of Appeals</strong> / <strong class="text-white/80">Court of Criminal Appeals</strong>: counties dissolved per
             <a class="text-white/70 underline decoration-white/20 hover:text-white" href="https://statutes.capitol.texas.gov/Docs/GV/htm/GV.22.htm#22.201" rel="noopener noreferrer" target="_blank">Tex. Gov&rsquo;t Code &sect;22.201</a>
             (CCA is statewide final criminal review).
@@ -152,7 +160,47 @@
               </label>
               <label class="inline-flex items-center gap-2 cursor-pointer select-none">
                 <input type="checkbox" id="layer-tx-water" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
-                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-sky-500/90 border border-white/30"></span> Water districts</span>
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-sky-500/90 border border-white/30"></span> Water districts (all)</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-water-mud" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-cyan-300/90 border border-white/30"></span> MUDs</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-water-wcid" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-blue-300/90 border border-white/30"></span> WCIDs</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-water-sud" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-teal-200/90 border border-white/30"></span> SUDs</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-water-ra" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-purple-300/90 border border-white/30"></span> River authorities</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-water-other" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-sky-200/80 border border-white/30"></span> Other water districts</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-gcd" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-emerald-500/90 border border-white/30"></span> Groundwater conservation districts</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-pgma" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-yellow-300/90 border border-white/30"></span> Priority groundwater areas</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-gma" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-green-300/90 border border-white/30"></span> Groundwater management areas</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-rwpa" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-fuchsia-300/90 border border-white/30"></span> Regional water planning areas</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="layer-tx-rasl" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
+                <span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-purple-500/90 border border-white/30"></span> River auth. / special law</span>
               </label>
               <label class="inline-flex items-center gap-2 cursor-pointer select-none">
                 <input type="checkbox" id="layer-tx-places-inc" class="rounded border-white/30 bg-navy-900 text-patriot-blue focus:ring-patriot-blue/40" />
@@ -174,7 +222,8 @@
                 (from <code class="font-mono text-white/80">/app/src</code> in Docker), then reload — toggles become instant (no live Census/TCEQ calls). That command writes
                 <code class="font-mono text-white/70">tx-cd119</code>, <code class="font-mono text-white/70">tx-sldu</code>, <code class="font-mono text-white/70">tx-sldl</code>,
                 <code class="font-mono text-white/70">tx-sboe-plane2106</code>, <code class="font-mono text-white/70">tx-school-districts</code>,
-                <code class="font-mono text-white/70">tx-water-districts</code>, <code class="font-mono text-white/70">tx-places-incorporated</code>,
+                <code class="font-mono text-white/70">tx-water-districts</code>, <code class="font-mono text-white/70">tx-groundwater-conservation-districts</code>,
+                <code class="font-mono text-white/70">tx-priority-groundwater-management-areas</code>, <code class="font-mono text-white/70">tx-places-incorporated</code>,
                 <code class="font-mono text-white/70">tx-places-cdp</code>, <code class="font-mono text-white/70">tx-urban-areas</code>,
                 <code class="font-mono text-white/70">tx-coa-districts</code>, and <code class="font-mono text-white/70">tx-cca-statewide</code>.
                 Re-run after updates to refresh attributes (e.g. POP100 and full field lists in tooltips).
@@ -264,12 +313,23 @@
         cc: "layer-tx-cca",
         sc: "layer-tx-school",
         wa: "layer-tx-water",
+        wm: "layer-tx-water-mud",
+        ww: "layer-tx-water-wcid",
+        ws: "layer-tx-water-sud",
+        wr: "layer-tx-water-ra",
+        wo: "layer-tx-water-other",
+        gc: "layer-tx-gcd",
+        pg: "layer-tx-pgma",
+        gm: "layer-tx-gma",
+        rw: "layer-tx-rwpa",
+        rs: "layer-tx-rasl",
         pi: "layer-tx-places-inc",
         pc: "layer-tx-places-cdp",
         ur: "layer-tx-urban",
       };
 
-      var basemapKey = "demo";
+      var DEFAULT_BASEMAP_KEY = "dark";
+      var basemapKey = DEFAULT_BASEMAP_KEY;
 
       function readPrefsFromLocationHash() {
         var raw = (location.hash || "").replace(/^#/, "");
@@ -313,7 +373,7 @@
         });
         codes.sort();
         var parts = ["l=" + codes.join(",")];
-        if (basemapKey !== "demo") parts.push("b=" + encodeURIComponent(basemapKey));
+        if (basemapKey !== DEFAULT_BASEMAP_KEY) parts.push("b=" + encodeURIComponent(basemapKey));
         history.replaceState(null, "", "#" + parts.join("&"));
       }
 
@@ -479,6 +539,141 @@
           fillOpacity: 0.065,
           lineColor: "rgba(125, 211, 252, 0.78)",
           lineWidth: 1.0,
+        },
+        "layer-tx-water-mud": {
+          sourceId: "tx-water",
+          fillId: "tx-water-mud-fill",
+          lineId: "tx-water-mud-line",
+          labelLayerId: "tx-water-mud-label",
+          labelTextCoalesce: ["NAME"],
+          labelMinZoom: 9,
+          dataUrlKey: "waterUrl",
+          fillColor: "#67e8f9",
+          fillOpacity: 0.07,
+          lineColor: "rgba(165, 243, 252, 0.82)",
+          lineWidth: 1.0,
+          filter: ["==", "TYPE", "MUD"],
+        },
+        "layer-tx-water-wcid": {
+          sourceId: "tx-water",
+          fillId: "tx-water-wcid-fill",
+          lineId: "tx-water-wcid-line",
+          labelLayerId: "tx-water-wcid-label",
+          labelTextCoalesce: ["NAME"],
+          labelMinZoom: 9,
+          dataUrlKey: "waterUrl",
+          fillColor: "#93c5fd",
+          fillOpacity: 0.07,
+          lineColor: "rgba(191, 219, 254, 0.82)",
+          lineWidth: 1.0,
+          filter: ["==", "TYPE", "WCID"],
+        },
+        "layer-tx-water-sud": {
+          sourceId: "tx-water",
+          fillId: "tx-water-sud-fill",
+          lineId: "tx-water-sud-line",
+          labelLayerId: "tx-water-sud-label",
+          labelTextCoalesce: ["NAME"],
+          labelMinZoom: 9,
+          dataUrlKey: "waterUrl",
+          fillColor: "#99f6e4",
+          fillOpacity: 0.07,
+          lineColor: "rgba(204, 251, 241, 0.82)",
+          lineWidth: 1.0,
+          filter: ["==", "TYPE", "SUD"],
+        },
+        "layer-tx-water-ra": {
+          sourceId: "tx-water",
+          fillId: "tx-water-ra-fill",
+          lineId: "tx-water-ra-line",
+          labelLayerId: "tx-water-ra-label",
+          labelTextCoalesce: ["NAME"],
+          labelMinZoom: 7,
+          dataUrlKey: "waterUrl",
+          fillColor: "#d8b4fe",
+          fillOpacity: 0.06,
+          lineColor: "rgba(233, 213, 255, 0.82)",
+          lineWidth: 1.05,
+          filter: ["==", "TYPE", "RA"],
+        },
+        "layer-tx-water-other": {
+          sourceId: "tx-water",
+          fillId: "tx-water-other-fill",
+          lineId: "tx-water-other-line",
+          labelLayerId: "tx-water-other-label",
+          labelTextCoalesce: ["NAME"],
+          labelMinZoom: 9,
+          dataUrlKey: "waterUrl",
+          fillColor: "#bae6fd",
+          fillOpacity: 0.055,
+          lineColor: "rgba(224, 242, 254, 0.72)",
+          lineWidth: 0.9,
+          filter: ["!in", "TYPE", "MUD", "WCID", "SUD", "RA"],
+        },
+        "layer-tx-gcd": {
+          sourceId: "tx-gcd",
+          fillId: "tx-gcd-fill",
+          lineId: "tx-gcd-line",
+          labelLayerId: "tx-gcd-label",
+          labelTextCoalesce: ["SHORTNAM", "DISTNAME"],
+          labelMinZoom: 7,
+          dataUrlKey: "gcdUrl",
+          fillColor: "#10b981",
+          fillOpacity: 0.07,
+          lineColor: "rgba(110, 231, 183, 0.85)",
+          lineWidth: 1.15,
+        },
+        "layer-tx-pgma": {
+          sourceId: "tx-pgma",
+          fillId: "tx-pgma-fill",
+          lineId: "tx-pgma-line",
+          labelLayerId: "tx-pgma-label",
+          labelTextCoalesce: ["PGMA_NAME", "NAME"],
+          labelMinZoom: 6,
+          dataUrlKey: "pgmaUrl",
+          fillColor: "#fde047",
+          fillOpacity: 0.05,
+          lineColor: "rgba(253, 224, 71, 0.82)",
+          lineWidth: 1.05,
+        },
+        "layer-tx-gma": {
+          sourceId: "tx-gma",
+          fillId: "tx-gma-fill",
+          lineId: "tx-gma-line",
+          labelLayerId: "tx-gma-label",
+          labelTextCoalesce: ["GMA", "GMA_NUM", "NAME"],
+          labelMinZoom: 5,
+          dataUrlKey: "gmaUrl",
+          fillColor: "#86efac",
+          fillOpacity: 0.045,
+          lineColor: "rgba(187, 247, 208, 0.78)",
+          lineWidth: 1.05,
+        },
+        "layer-tx-rwpa": {
+          sourceId: "tx-rwpa",
+          fillId: "tx-rwpa-fill",
+          lineId: "tx-rwpa-line",
+          labelLayerId: "tx-rwpa-label",
+          labelTextCoalesce: ["REGION", "RWPA", "NAME"],
+          labelMinZoom: 5,
+          dataUrlKey: "rwpaUrl",
+          fillColor: "#f0abfc",
+          fillOpacity: 0.04,
+          lineColor: "rgba(245, 208, 254, 0.78)",
+          lineWidth: 1.05,
+        },
+        "layer-tx-rasl": {
+          sourceId: "tx-rasl",
+          fillId: "tx-rasl-fill",
+          lineId: "tx-rasl-line",
+          labelLayerId: "tx-rasl-label",
+          labelTextCoalesce: ["NAME", "DISTRICT", "AUTHORITY"],
+          labelMinZoom: 7,
+          dataUrlKey: "raslUrl",
+          fillColor: "#a855f7",
+          fillOpacity: 0.05,
+          lineColor: "rgba(216, 180, 254, 0.82)",
+          lineWidth: 1.05,
         },
         "layer-tx-places-inc": {
           sourceId: "tx-places-inc",
@@ -723,6 +918,16 @@
         );
         var cSc = document.getElementById("layer-tx-school");
         var cWa = document.getElementById("layer-tx-water");
+        var cWm = document.getElementById("layer-tx-water-mud");
+        var cWw = document.getElementById("layer-tx-water-wcid");
+        var cWs = document.getElementById("layer-tx-water-sud");
+        var cWr = document.getElementById("layer-tx-water-ra");
+        var cWo = document.getElementById("layer-tx-water-other");
+        var cGc = document.getElementById("layer-tx-gcd");
+        var cPg = document.getElementById("layer-tx-pgma");
+        var cGm = document.getElementById("layer-tx-gma");
+        var cRw = document.getElementById("layer-tx-rwpa");
+        var cRs = document.getElementById("layer-tx-rasl");
         parts.push(
           chip(
             "School districts",
@@ -732,7 +937,47 @@
           ),
         );
         parts.push(
-          chip("Water districts", "bg-sky-500/90", !!(cWa && cWa.checked && !cWa.disabled), !!(cWa && cWa.disabled)),
+          chip("Water districts (all)", "bg-sky-500/90", !!(cWa && cWa.checked && !cWa.disabled), !!(cWa && cWa.disabled)),
+        );
+        parts.push(
+          chip("MUDs", "bg-cyan-300/90", !!(cWm && cWm.checked && !cWm.disabled), !!(cWm && cWm.disabled)),
+        );
+        parts.push(
+          chip("WCIDs", "bg-blue-300/90", !!(cWw && cWw.checked && !cWw.disabled), !!(cWw && cWw.disabled)),
+        );
+        parts.push(
+          chip("SUDs", "bg-teal-200/90", !!(cWs && cWs.checked && !cWs.disabled), !!(cWs && cWs.disabled)),
+        );
+        parts.push(
+          chip("River authorities", "bg-purple-300/90", !!(cWr && cWr.checked && !cWr.disabled), !!(cWr && cWr.disabled)),
+        );
+        parts.push(
+          chip("Other water districts", "bg-sky-200/80", !!(cWo && cWo.checked && !cWo.disabled), !!(cWo && cWo.disabled)),
+        );
+        parts.push(
+          chip(
+            "Groundwater conservation districts",
+            "bg-emerald-500/90",
+            !!(cGc && cGc.checked && !cGc.disabled),
+            !!(cGc && cGc.disabled),
+          ),
+        );
+        parts.push(
+          chip(
+            "Priority groundwater areas",
+            "bg-yellow-300/90",
+            !!(cPg && cPg.checked && !cPg.disabled),
+            !!(cPg && cPg.disabled),
+          ),
+        );
+        parts.push(
+          chip("Groundwater management areas", "bg-green-300/90", !!(cGm && cGm.checked && !cGm.disabled), !!(cGm && cGm.disabled)),
+        );
+        parts.push(
+          chip("Regional water planning areas", "bg-fuchsia-300/90", !!(cRw && cRw.checked && !cRw.disabled), !!(cRw && cRw.disabled)),
+        );
+        parts.push(
+          chip("River auth. / special law", "bg-purple-500/90", !!(cRs && cRs.checked && !cRs.disabled), !!(cRs && cRs.disabled)),
         );
         var cPi = document.getElementById("layer-tx-places-inc");
         var cPc = document.getElementById("layer-tx-places-cdp");
@@ -837,6 +1082,16 @@
         if (layerId === "tx-cca-fill") return "Court of Criminal Appeals";
         if (layerId === "tx-school-fill") return "School district (Census)";
         if (layerId === "tx-water-fill") return "Water district (TCEQ)";
+        if (layerId === "tx-water-mud-fill") return "Municipal utility district (TCEQ)";
+        if (layerId === "tx-water-wcid-fill") return "Water control & improvement district (TCEQ)";
+        if (layerId === "tx-water-sud-fill") return "Special utility district (TCEQ)";
+        if (layerId === "tx-water-ra-fill") return "River authority (TCEQ)";
+        if (layerId === "tx-water-other-fill") return "Other water district (TCEQ)";
+        if (layerId === "tx-gcd-fill") return "Groundwater conservation district (TCEQ)";
+        if (layerId === "tx-pgma-fill") return "Priority groundwater management area (TCEQ)";
+        if (layerId === "tx-gma-fill") return "Groundwater management area (TWDB)";
+        if (layerId === "tx-rwpa-fill") return "Regional water planning area (TWDB)";
+        if (layerId === "tx-rasl-fill") return "River authority / special law district (TWDB)";
         if (layerId === "tx-places-inc-fill") return "Incorporated place (Census)";
         if (layerId === "tx-places-cdp-fill") return "Census Designated Place";
         if (layerId === "tx-urban-fill") return "Urban area (Census 2020)";
@@ -850,9 +1105,18 @@
           "NAME",
           "District",
           "DISTRICT",
+          "DISTRICT_ID",
           "DISTRICT_NM",
           "DIST_NAME",
           "DISTRICT_NAME",
+          "DISTNAME",
+          "SHORTNAM",
+          "PGMA_NAME",
+          "GMA",
+          "GMA_NUM",
+          "REGION",
+          "RWPA",
+          "AUTHORITY",
           "LABEL",
           "BASENAME",
           "GNIS_NAME",
@@ -868,6 +1132,20 @@
 
       function layerAttrsCaption(layerId) {
         if (layerId === "tx-water-fill") return "All attributes (TCEQ)";
+        if (
+          layerId === "tx-water-mud-fill" ||
+          layerId === "tx-water-wcid-fill" ||
+          layerId === "tx-water-sud-fill" ||
+          layerId === "tx-water-ra-fill" ||
+          layerId === "tx-water-other-fill"
+        ) {
+          return "All attributes (TCEQ Water Districts)";
+        }
+        if (layerId === "tx-gcd-fill") return "All attributes (TCEQ GCD Viewer)";
+        if (layerId === "tx-pgma-fill") return "All attributes (TCEQ PGMA Viewer)";
+        if (layerId === "tx-gma-fill" || layerId === "tx-rwpa-fill" || layerId === "tx-rasl-fill") {
+          return "All attributes (TWDB GIS)";
+        }
         if (layerId === "tx-school-fill") return "All attributes (Census School)";
         if (layerId === "tx-coa-fill") return "All attributes (ballot map: §22.201 dissolve)";
         if (layerId === "tx-cca-fill") return "All attributes (ballot map: statewide CCA)";
@@ -929,31 +1207,40 @@
       }
 
       function addBundledLegislativeLayers(spec, url) {
-        if (map.getSource(spec.sourceId)) return;
-        map.addSource(spec.sourceId, { type: "geojson", data: url });
-        map.addLayer({
-          id: spec.fillId,
-          type: "fill",
-          source: spec.sourceId,
-          layout: { visibility: "none" },
-          paint: {
-            "fill-color": spec.fillColor,
-            "fill-opacity": spec.fillOpacity,
-          },
-        });
-        map.addLayer({
-          id: spec.lineId,
-          type: "line",
-          source: spec.sourceId,
-          layout: { visibility: "none" },
-          paint: {
-            "line-color": spec.lineColor,
-            "line-width": spec.lineWidth,
-          },
-        });
-        if (spec.labelLayerId) {
+        if (!map.getSource(spec.sourceId)) {
+          map.addSource(spec.sourceId, { type: "geojson", data: url });
+        }
+        if (!map.getLayer(spec.fillId)) {
+          var fillLayer = {
+            id: spec.fillId,
+            type: "fill",
+            source: spec.sourceId,
+            layout: { visibility: "none" },
+            paint: {
+              "fill-color": spec.fillColor,
+              "fill-opacity": spec.fillOpacity,
+            },
+          };
+          if (spec.filter) fillLayer.filter = spec.filter;
+          map.addLayer(fillLayer);
+        }
+        if (!map.getLayer(spec.lineId)) {
+          var lineLayer = {
+            id: spec.lineId,
+            type: "line",
+            source: spec.sourceId,
+            layout: { visibility: "none" },
+            paint: {
+              "line-color": spec.lineColor,
+              "line-width": spec.lineWidth,
+            },
+          };
+          if (spec.filter) lineLayer.filter = spec.filter;
+          map.addLayer(lineLayer);
+        }
+        if (spec.labelLayerId && !map.getLayer(spec.labelLayerId)) {
           var minz = spec.labelMinZoom == null ? 6 : spec.labelMinZoom;
-          map.addLayer({
+          var labelLayer = {
             id: spec.labelLayerId,
             type: "symbol",
             source: spec.sourceId,
@@ -971,7 +1258,9 @@
               "text-halo-color": "rgba(15, 23, 42, 0.9)",
               "text-halo-width": 1.2,
             },
-          });
+          };
+          if (spec.filter) labelLayer.filter = spec.filter;
+          map.addLayer(labelLayer);
         }
       }
 
@@ -984,53 +1273,59 @@
       }
 
       function addCoaAppealsLayers(url) {
-        if (map.getSource("tx-coa")) return;
-        map.addSource("tx-coa", { type: "geojson", data: url });
-        map.addLayer({
-          id: "tx-coa-fill",
-          type: "fill",
-          source: "tx-coa",
-          layout: { visibility: "none" },
-          paint: {
-            "fill-color": paintMatchGet("COA_DIST", coaDistIds, coaFillColors, "#64748b"),
-            "fill-opacity": 0.078,
-          },
-        });
-        map.addLayer({
-          id: "tx-coa-line",
-          type: "line",
-          source: "tx-coa",
-          layout: { visibility: "none" },
-          paint: {
-            "line-color": paintMatchGet("COA_DIST", coaDistIds, coaLineColors, "rgba(100,116,139,0.85)"),
-            "line-width": 1.08,
-          },
-        });
+        if (!map.getSource("tx-coa")) map.addSource("tx-coa", { type: "geojson", data: url });
+        if (!map.getLayer("tx-coa-fill")) {
+          map.addLayer({
+            id: "tx-coa-fill",
+            type: "fill",
+            source: "tx-coa",
+            layout: { visibility: "none" },
+            paint: {
+              "fill-color": paintMatchGet("COA_DIST", coaDistIds, coaFillColors, "#64748b"),
+              "fill-opacity": 0.078,
+            },
+          });
+        }
+        if (!map.getLayer("tx-coa-line")) {
+          map.addLayer({
+            id: "tx-coa-line",
+            type: "line",
+            source: "tx-coa",
+            layout: { visibility: "none" },
+            paint: {
+              "line-color": paintMatchGet("COA_DIST", coaDistIds, coaLineColors, "rgba(100,116,139,0.85)"),
+              "line-width": 1.08,
+            },
+          });
+        }
       }
 
       function addCriminalAppealsLayers(url) {
-        if (map.getSource("tx-cca")) return;
-        map.addSource("tx-cca", { type: "geojson", data: url });
-        map.addLayer({
-          id: "tx-cca-fill",
-          type: "fill",
-          source: "tx-cca",
-          layout: { visibility: "none" },
-          paint: {
-            "fill-color": "#9f1239",
-            "fill-opacity": 0.055,
-          },
-        });
-        map.addLayer({
-          id: "tx-cca-line",
-          type: "line",
-          source: "tx-cca",
-          layout: { visibility: "none" },
-          paint: {
-            "line-color": "rgba(190,24,93,0.75)",
-            "line-width": 1.1,
-          },
-        });
+        if (!map.getSource("tx-cca")) map.addSource("tx-cca", { type: "geojson", data: url });
+        if (!map.getLayer("tx-cca-fill")) {
+          map.addLayer({
+            id: "tx-cca-fill",
+            type: "fill",
+            source: "tx-cca",
+            layout: { visibility: "none" },
+            paint: {
+              "fill-color": "#9f1239",
+              "fill-opacity": 0.055,
+            },
+          });
+        }
+        if (!map.getLayer("tx-cca-line")) {
+          map.addLayer({
+            id: "tx-cca-line",
+            type: "line",
+            source: "tx-cca",
+            layout: { visibility: "none" },
+            paint: {
+              "line-color": "rgba(190,24,93,0.75)",
+              "line-width": 1.1,
+            },
+          });
+        }
       }
 
       function setJudicialPairVisibility(fillId, lineId, visible) {
@@ -1053,6 +1348,16 @@
             "tx-cca-fill",
             "tx-school-fill",
             "tx-water-fill",
+            "tx-water-mud-fill",
+            "tx-water-wcid-fill",
+            "tx-water-sud-fill",
+            "tx-water-ra-fill",
+            "tx-water-other-fill",
+            "tx-gcd-fill",
+            "tx-pgma-fill",
+            "tx-gma-fill",
+            "tx-rwpa-fill",
+            "tx-rasl-fill",
             "tx-places-inc-fill",
             "tx-places-cdp-fill",
             "tx-urban-fill",
@@ -1092,44 +1397,58 @@
 
       var ballotMapUiWired = false;
 
-      function installBallotMapOverlays() {
-        if (map.getSource("tx-counties")) return;
+      function syncBallotMapOverlaysAfterStyleLoad() {
+        installBallotMapOverlays();
+        registerBallotMapUiOnce();
+        refreshActiveLayersSummary();
+        updateOverlayStrengthLabel();
+        pushLocationHashFromUi();
+      }
 
-        map.addSource("tx-counties", {
-          type: "geojson",
-          data: geojsonUrl,
-        });
-        map.addLayer({
-          id: "tx-counties-fill",
-          type: "fill",
-          source: "tx-counties",
-          paint: { "fill-color": "#2563EB", "fill-opacity": BASE_COUNTY_FILL_ON },
-        });
-        map.addLayer({
-          id: "tx-counties-line",
-          type: "line",
-          source: "tx-counties",
-          paint: { "line-color": "rgba(255,255,255,0.38)", "line-width": 0.85 },
-        });
-        map.addLayer({
-          id: "tx-counties-label",
-          type: "symbol",
-          source: "tx-counties",
-          minzoom: 7,
-          layout: {
-            visibility: "none",
-            "text-field": ["coalesce", ["get", "NAME"], ""],
-            "text-size": 11,
-            "text-font": labelFontStack(),
-            "text-allow-overlap": false,
-            "text-ignore-placement": false,
-          },
-          paint: {
-            "text-color": "rgba(248, 250, 252, 0.88)",
-            "text-halo-color": "rgba(15, 23, 42, 0.9)",
-            "text-halo-width": 1.2,
-          },
-        });
+      function installBallotMapOverlays() {
+        if (!map.getSource("tx-counties")) {
+          map.addSource("tx-counties", {
+            type: "geojson",
+            data: geojsonUrl,
+          });
+        }
+        if (!map.getLayer("tx-counties-fill")) {
+          map.addLayer({
+            id: "tx-counties-fill",
+            type: "fill",
+            source: "tx-counties",
+            paint: { "fill-color": "#2563EB", "fill-opacity": BASE_COUNTY_FILL_ON },
+          });
+        }
+        if (!map.getLayer("tx-counties-line")) {
+          map.addLayer({
+            id: "tx-counties-line",
+            type: "line",
+            source: "tx-counties",
+            paint: { "line-color": "rgba(255,255,255,0.38)", "line-width": 0.85 },
+          });
+        }
+        if (!map.getLayer("tx-counties-label")) {
+          map.addLayer({
+            id: "tx-counties-label",
+            type: "symbol",
+            source: "tx-counties",
+            minzoom: 7,
+            layout: {
+              visibility: "none",
+              "text-field": ["coalesce", ["get", "NAME"], ""],
+              "text-size": 11,
+              "text-font": labelFontStack(),
+              "text-allow-overlap": false,
+              "text-ignore-placement": false,
+            },
+            paint: {
+              "text-color": "rgba(248, 250, 252, 0.88)",
+              "text-halo-color": "rgba(15, 23, 42, 0.9)",
+              "text-halo-width": 1.2,
+            },
+          });
+        }
 
         Object.keys(tigerSpecs).forEach(function (checkboxId) {
           var sp = tigerSpecs[checkboxId];
@@ -1234,24 +1553,18 @@
         if (bms) {
           bms.addEventListener("change", function () {
             basemapKey = bms.value || "demo";
-            map.setStyle(BASEMAPS[basemapKey].url);
-            map.once("load", function () {
-              installBallotMapOverlays();
-              registerBallotMapUiOnce();
-              refreshActiveLayersSummary();
-              updateOverlayStrengthLabel();
-              pushLocationHashFromUi();
-            });
+            hideCountyTooltip();
+            setInspectorHtml(
+              '<p class="text-sm text-white/45 leading-relaxed m-0">Reloading map layers for the selected basemap…</p>',
+            );
+            map.once("style.load", syncBallotMapOverlaysAfterStyleLoad);
+            map.setStyle(BASEMAPS[basemapKey].url, { diff: false });
           });
         }
       }
 
       map.on("load", function () {
-        installBallotMapOverlays();
-        registerBallotMapUiOnce();
-        refreshActiveLayersSummary();
-        updateOverlayStrengthLabel();
-        pushLocationHashFromUi();
+        syncBallotMapOverlaysAfterStyleLoad();
       });
 
       map.on("click", function (e) {

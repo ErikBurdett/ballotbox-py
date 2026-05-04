@@ -32,6 +32,8 @@ TIGERWEB_PLACES_MAPSERVER = (
 )
 TIGERWEB_URBAN_MAPSERVER = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Urban/MapServer"
 TCEQ_WATER_MAPSERVER = "https://gisweb.tceq.texas.gov/arcgis/rest/services/Public/WaterDistricts/MapServer"
+TCEQ_GCD_MAPSERVER = "https://gisweb.tceq.texas.gov/arcgis/rest/services/Public/GCDs/MapServer"
+TCEQ_PGMA_MAPSERVER = "https://gisweb.tceq.texas.gov/arcgis/rest/services/Public/PGMA/MapServer"
 
 # Places / urban: current-year-ish TIGERweb layer ids (see each service's ?f=json catalog)
 PLACES_INCORPORATED_LAYER_ID = 4
@@ -43,6 +45,9 @@ PLANE2106_ZIP_URL = (
     "https://data.capitol.texas.gov/dataset/ad1ae979-6df9-4322-98cf-6771cc67f02d/"
     "resource/640a507d-e26e-4b50-861c-7913c152bdc7/download/plane2106.zip"
 )
+TWDB_GMA_ZIP_URL = "https://www.twdb.texas.gov/mapping/gisdata/doc/gma.zip"
+TWDB_RWPA_ZIP_URL = "https://www.twdb.texas.gov/mapping/gisdata/doc/RWPA_Shapefile.zip"
+TWDB_RASL_ZIP_URL = "https://www.twdb.texas.gov/mapping/gisdata/doc/RA_SLD_Shapefile.zip"
 
 # Census School service: unified / secondary / elementary (ACS 2025 block uses layers 0–2)
 SCHOOL_LAYER_IDS: tuple[tuple[str, int], ...] = (
@@ -153,6 +158,30 @@ def fetch_tceq_water_districts() -> dict[str, Any]:
     )
 
 
+def fetch_tceq_groundwater_conservation_districts() -> dict[str, Any]:
+    """TCEQ Groundwater Conservation District boundaries from the public GCD viewer service."""
+    return arcgis_geojson_paged(
+        TCEQ_GCD_MAPSERVER,
+        0,
+        "1=1",
+        page_size=500,
+        max_offset=10_000,
+        timeout_s=240.0,
+    )
+
+
+def fetch_tceq_priority_groundwater_management_areas() -> dict[str, Any]:
+    """TCEQ Priority Groundwater Management Areas from the public GCD viewer service."""
+    return arcgis_geojson_paged(
+        TCEQ_PGMA_MAPSERVER,
+        0,
+        "1=1",
+        page_size=500,
+        max_offset=10_000,
+        timeout_s=240.0,
+    )
+
+
 def _json_safe_property_value(val: Any) -> Any:
     """
     Convert shapefile / GDAL attribute values to JSON-serializable scalars.
@@ -248,6 +277,43 @@ def fetch_texas_sboe_plane2106_geojson(*, timeout_s: float = 120.0) -> dict[str,
         return shapefile_to_geojson_feature_collection(shp)
 
 
+def fetch_shapefile_zip_geojson(url: str, *, timeout_s: float = 120.0) -> dict[str, Any]:
+    """Download a zipped shapefile and convert the first ``*.shp`` found to GeoJSON."""
+    with tempfile.TemporaryDirectory(prefix="shpzip_") as td_raw:
+        td = Path(td_raw)
+        zpath = td / "source.zip"
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "ballotbox-py/1.0 (+https://github.com/) texas-ballot-map-shapefile-fetch",
+                "Accept": "*/*",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            zpath.write_bytes(resp.read())
+        with zipfile.ZipFile(zpath) as zf:
+            zf.extractall(td)
+        shp_files = sorted(td.rglob("*.shp"))
+        if not shp_files:
+            raise FileNotFoundError(f"No shapefile found after extracting {url}")
+        return shapefile_to_geojson_feature_collection(shp_files[0])
+
+
+def fetch_twdb_groundwater_management_areas() -> dict[str, Any]:
+    """TWDB Groundwater Management Areas (GMA) boundaries."""
+    return fetch_shapefile_zip_geojson(TWDB_GMA_ZIP_URL)
+
+
+def fetch_twdb_regional_water_planning_areas() -> dict[str, Any]:
+    """TWDB Regional Water Planning Areas (RWPA) boundaries."""
+    return fetch_shapefile_zip_geojson(TWDB_RWPA_ZIP_URL)
+
+
+def fetch_twdb_river_authorities_special_law_districts() -> dict[str, Any]:
+    """TWDB River Authorities and Special Law Districts statutory boundaries."""
+    return fetch_shapefile_zip_geojson(TWDB_RASL_ZIP_URL)
+
+
 def fetch_texas_incorporated_places() -> dict[str, Any]:
     """Census TIGERweb: incorporated places clipped to Texas (STATE='48')."""
     return arcgis_geojson_paged(
@@ -313,6 +379,11 @@ def fetch_all_ballot_map_geo_bundles(
     sboe = fetch_texas_sboe_plane2106_geojson()
     school = fetch_texas_school_districts_merged()
     water = fetch_tceq_water_districts()
+    gcd = fetch_tceq_groundwater_conservation_districts()
+    pgma = fetch_tceq_priority_groundwater_management_areas()
+    gma = fetch_twdb_groundwater_management_areas()
+    rwpa = fetch_twdb_regional_water_planning_areas()
+    rasl = fetch_twdb_river_authorities_special_law_districts()
     places = fetch_texas_incorporated_places()
     cdps = fetch_texas_census_designated_places()
     urban = fetch_texas_urban_areas_2020_name_tx()
@@ -331,6 +402,31 @@ def fetch_all_ballot_map_geo_bundles(
             school,
         ),
         ("tx-water-districts.geojson", "Texas water districts (TCEQ)", water),
+        (
+            "tx-groundwater-conservation-districts.geojson",
+            "Texas groundwater conservation districts (TCEQ GCD viewer)",
+            gcd,
+        ),
+        (
+            "tx-priority-groundwater-management-areas.geojson",
+            "Texas priority groundwater management areas (TCEQ GCD viewer)",
+            pgma,
+        ),
+        (
+            "tx-groundwater-management-areas.geojson",
+            "Texas groundwater management areas (TWDB)",
+            gma,
+        ),
+        (
+            "tx-regional-water-planning-areas.geojson",
+            "Texas regional water planning areas (TWDB)",
+            rwpa,
+        ),
+        (
+            "tx-river-authorities-special-law-districts.geojson",
+            "Texas river authorities and special law districts (TWDB)",
+            rasl,
+        ),
         (
             "tx-places-incorporated.geojson",
             "Texas incorporated places (Census TIGERweb)",
