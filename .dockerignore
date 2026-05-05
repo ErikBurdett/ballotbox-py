@@ -9,3 +9,7 @@ src/staticfiles/
 db_data/
 .cursor/
 *.sqlite3
+docker-compose*.yml
+README.md
+DEPLOYMENT.md
+tests/

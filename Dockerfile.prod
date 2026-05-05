@@ -1,0 +1,62 @@
+# syntax=docker/dockerfile:1
+
+FROM node:20-alpine AS assets
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY src/assets ./src/assets
+COPY tailwind.config.js postcss.config.js ./
+RUN npm run build
+
+
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    DJANGO_SETTINGS_MODULE=american_voter_directory.settings \
+    PORT=8000
+
+WORKDIR /app
+
+# Runtime geospatial dependencies for GeoDjango/GDAL/GEOS/PROJ and Postgres client libs.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    binutils \
+    curl \
+    gdal-bin \
+    libgdal-dev \
+    libgeos-c1v5 \
+    libpq5 \
+    libproj-dev \
+    proj-bin \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+COPY scripts/ /app/scripts/
+RUN chmod +x /app/scripts/*.sh
+
+COPY src/ /app/src/
+COPY --from=assets /app/src/static/css/app.css /app/src/static/css/app.css
+
+# Build staticfiles into the image for WhiteNoise. The database URL is only
+# needed because settings require it at import time; collectstatic does not connect.
+RUN cd /app/src && \
+    DJANGO_DEBUG=0 \
+    DJANGO_SECRET_KEY=build-only-not-used-at-runtime \
+    DJANGO_ALLOWED_HOSTS=localhost \
+    DJANGO_CSRF_TRUSTED_ORIGINS=https://localhost \
+    DATABASE_URL=postgis://build:build@localhost:5432/build \
+    REDIS_URL=redis://localhost:6379/0 \
+    CELERY_BROKER_URL=redis://localhost:6379/1 \
+    CELERY_RESULT_BACKEND=redis://localhost:6379/2 \
+    python manage.py collectstatic --noinput
+
+EXPOSE 8000
+
+ENTRYPOINT ["bash", "/app/scripts/entrypoint.sh"]
+CMD ["bash", "/app/scripts/start-web-prod.sh"]
